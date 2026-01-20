@@ -3,11 +3,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, Edit, Trash2, User, Calendar, Eye } from "lucide-react";
+import { ArrowLeft, Edit, Trash2, User, Calendar, Eye, Heart } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { usePost, useDeletePost, useIncrementViews } from "@/hooks/usePosts";
+import { usePost, useDeletePost, useIncrementViews, useToggleLike } from "@/hooks/usePosts";
 import { useToast } from "@/hooks/use-toast";
+import { CommentList } from "@/components/board/CommentList";
 
 const PostDetailPage = () => {
   const navigate = useNavigate();
@@ -19,13 +20,13 @@ const PostDetailPage = () => {
   const { data: post, isLoading, error } = usePost(postId);
   const deletePostMutation = useDeletePost();
   const incrementViewsMutation = useIncrementViews();
+  const toggleLikeMutation = useToggleLike();
 
   useEffect(() => {
-    // 게시글 조회수 증가
-    if (postId && post) {
+    if (postId) {
       incrementViewsMutation.mutate(postId);
     }
-  }, [postId, post]);
+  }, [postId]);
 
   const handleEdit = () => {
     navigate(`/posts/${id}/edit`);
@@ -47,6 +48,27 @@ const PostDetailPage = () => {
       onError: (error) => {
         toast({
           title: "삭제 실패",
+          description: error.message,
+          variant: "destructive",
+        });
+      },
+    });
+  };
+
+  const handleLike = () => {
+    if (!user) {
+      toast({
+        title: "로그인 필요",
+        description: "좋아요를 누르려면 로그인해주세요.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    toggleLikeMutation.mutate(postId, {
+      onError: (error) => {
+        toast({
+          title: "좋아요 실패",
           description: error.message,
           variant: "destructive",
         });
@@ -143,24 +165,36 @@ const PostDetailPage = () => {
               <CardTitle className="text-2xl font-bold leading-tight">
                 {post.title}
               </CardTitle>
-              <Badge variant="secondary">
-                조회 {post.views}
-              </Badge>
             </div>
             
-            <div className="flex items-center space-x-6 text-sm text-gray-500 mt-4">
-              <div className="flex items-center space-x-1">
-                <User className="w-4 h-4" />
-                <span>{post.authorName}</span>
+            <div className="flex items-center justify-between mt-4">
+              <div className="flex items-center space-x-6 text-sm text-gray-500">
+                <div className="flex items-center space-x-1">
+                  <User className="w-4 h-4" />
+                  <span>{post.authorName}</span>
+                </div>
+                <div className="flex items-center space-x-1">
+                  <Calendar className="w-4 h-4" />
+                  <span>{formatDate(post.createdAt)}</span>
+                </div>
+                <div className="flex items-center space-x-1">
+                  <Eye className="w-4 h-4" />
+                  <span>조회 {post.views}</span>
+                </div>
               </div>
-              <div className="flex items-center space-x-1">
-                <Calendar className="w-4 h-4" />
-                <span>{formatDate(post.createdAt)}</span>
-              </div>
-              <div className="flex items-center space-x-1">
-                <Eye className="w-4 h-4" />
-                <span>조회 {post.views}</span>
-              </div>
+              
+              {/* 좋아요 버튼 */}
+              <Button
+                variant="outline"
+                onClick={handleLike}
+                disabled={toggleLikeMutation.isPending}
+                className="flex items-center space-x-2"
+              >
+                <Heart 
+                  className={`w-4 h-4 ${post.isLiked ? 'fill-red-500 text-red-500' : ''}`} 
+                />
+                <span>{post.likeCount}</span>
+              </Button>
             </div>
           </CardHeader>
           
@@ -172,6 +206,13 @@ const PostDetailPage = () => {
                 {post.content}
               </div>
             </div>
+          </CardContent>
+        </Card>
+
+        {/* 댓글 섹션 */}
+        <Card className="mt-8">
+          <CardContent className="pt-6">
+            <CommentList postId={postId} />
           </CardContent>
         </Card>
       </main>
