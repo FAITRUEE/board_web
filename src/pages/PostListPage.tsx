@@ -3,18 +3,21 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { PlusCircle, Search, User, Calendar, Eye, LogOut } from "lucide-react";
+import { PlusCircle, Search, User, Calendar, Eye, LogOut, Heart, MessageSquare } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePosts } from "@/hooks/usePosts";
+import { Pagination } from "@/components/board/Pagination";
 
 const PostListPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
+  const [currentPage, setCurrentPage] = useState(0);
   const navigate = useNavigate();
   const { user, logout } = useAuth();
-  const { data, isLoading, error } = usePosts();
+  const { data, isLoading, error } = usePosts(currentPage, 10);
 
   const posts = data?.posts || [];
+  const totalPages = data?.totalPages || 0;
 
   const filteredPosts = posts.filter(post =>
     post.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -63,7 +66,7 @@ const PostListPage = () => {
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
               <h1 className="text-2xl font-bold text-gray-900">게시판 시스템</h1>
-              <Badge variant="secondary">JWT Auth</Badge>
+              <Badge variant="secondary">CRUD Board</Badge>
             </div>
             <div className="flex items-center space-x-4">
               {user ? (
@@ -120,7 +123,7 @@ const PostListPage = () => {
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-semibold text-gray-900">
-              전체 게시글 ({filteredPosts.length})
+              전체 게시글 ({data?.total || 0})
             </h2>
           </div>
 
@@ -142,45 +145,72 @@ const PostListPage = () => {
               </CardContent>
             </Card>
           ) : (
-            <div className="space-y-4">
-              {filteredPosts.map((post) => (
-                <Card 
-                  key={post.id} 
-                  className="hover:shadow-md transition-shadow cursor-pointer"
-                  onClick={() => handlePostClick(post.id)}
-                >
-                  <CardHeader className="pb-3">
-                    <div className="flex items-start justify-between">
-                      <CardTitle className="text-lg hover:text-blue-600 transition-colors">
-                        {post.title}
-                      </CardTitle>
-                      <Badge variant="outline" className="ml-2 flex items-center space-x-1">
-                        <Eye className="w-3 h-3" />
-                        <span>{post.views}</span>
-                      </Badge>
-                    </div>
-                    <CardDescription className="line-clamp-2">
-                      {post.content.length > 100 
-                        ? `${post.content.substring(0, 100)}...` 
-                        : post.content
-                      }
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="pt-0">
-                    <div className="flex items-center space-x-4 text-sm text-gray-500">
-                      <div className="flex items-center space-x-1">
-                        <User className="w-4 h-4" />
-                        <span>{post.authorName}</span>
+            <>
+              <div className="space-y-4">
+                {filteredPosts.map((post) => (
+                  <Card 
+                    key={post.id} 
+                    className="hover:shadow-md transition-shadow cursor-pointer"
+                    onClick={() => handlePostClick(post.id)}
+                  >
+                    <CardHeader className="pb-3">
+                      <div className="flex items-start justify-between">
+                        <CardTitle className="text-lg hover:text-blue-600 transition-colors">
+                          {post.title}
+                        </CardTitle>
+                        <div className="flex items-center space-x-2 ml-2">
+                          <Badge variant="outline" className="flex items-center space-x-1">
+                            <Eye className="w-3 h-3" />
+                            <span>{post.views}</span>
+                          </Badge>
+                        </div>
                       </div>
-                      <div className="flex items-center space-x-1">
-                        <Calendar className="w-4 h-4" />
-                        <span>{formatDate(post.createdAt)}</span>
+                      <CardDescription className="line-clamp-2">
+                        {post.content.length > 100 
+                          ? `${post.content.substring(0, 100)}...` 
+                          : post.content
+                        }
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="pt-0">
+                      <div className="flex items-center justify-between text-sm text-gray-500">
+                        <div className="flex items-center space-x-4">
+                          <div className="flex items-center space-x-1">
+                            <User className="w-4 h-4" />
+                            <span>{post.authorName}</span>
+                          </div>
+                          <div className="flex items-center space-x-1">
+                            <Calendar className="w-4 h-4" />
+                            <span>{formatDate(post.createdAt)}</span>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-3">
+                          <div className="flex items-center space-x-1">
+                            <Heart className={`w-4 h-4 ${post.isLiked ? 'fill-red-500 text-red-500' : ''}`} />
+                            <span>{post.likeCount}</span>
+                          </div>
+                          <div className="flex items-center space-x-1">
+                            <MessageSquare className="w-4 h-4" />
+                            <span>{post.commentCount}</span>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+
+              {/* 페이지네이션 */}
+              {!searchTerm && (
+                <div className="mt-8">
+                  <Pagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    onPageChange={setCurrentPage}
+                  />
+                </div>
+              )}
+            </>
           )}
         </div>
       </main>
