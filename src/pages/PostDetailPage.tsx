@@ -1,33 +1,34 @@
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, Edit, Trash2, User, Calendar, Eye, MessageSquare } from "lucide-react";
+import { ArrowLeft, Edit, Trash2, User, Calendar, Eye } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { usePost } from "@/hooks/usePosts";
-import { usePosts } from "@/hooks/usePosts";
+import { usePost, useDeletePost, useIncrementViews } from "@/hooks/usePosts";
 import { useToast } from "@/hooks/use-toast";
 
-const PostDetail = () => {
+const PostDetailPage = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
-  const { post, loading, error } = usePost(id || "");
-  const { deletePost, incrementViews } = usePosts();
   const { toast } = useToast();
-  const [isDeleting, setIsDeleting] = useState(false);
+  
+  const postId = parseInt(id || "0");
+  const { data: post, isLoading, error } = usePost(postId);
+  const deletePostMutation = useDeletePost();
+  const incrementViewsMutation = useIncrementViews();
 
   useEffect(() => {
     // 게시글 조회수 증가
-    if (id && post) {
-      incrementViews(id);
+    if (postId && post) {
+      incrementViewsMutation.mutate(postId);
     }
-  }, [id, post, incrementViews]);
+  }, [postId, post]);
 
   const handleEdit = () => {
-    navigate(`/edit/${id}`);
+    navigate(`/posts/${id}/edit`);
   };
 
   const handleDelete = async () => {
@@ -35,26 +36,22 @@ const PostDetail = () => {
       return;
     }
 
-    if (!id) return;
-
-    setIsDeleting(true);
-    const { error } = await deletePost(id);
-
-    if (error) {
-      toast({
-        title: "삭제 실패",
-        description: error,
-        variant: "destructive",
-      });
-    } else {
-      toast({
-        title: "게시글 삭제 완료",
-        description: "게시글이 성공적으로 삭제되었습니다.",
-      });
-      navigate("/");
-    }
-
-    setIsDeleting(false);
+    deletePostMutation.mutate(postId, {
+      onSuccess: () => {
+        toast({
+          title: "게시글 삭제 완료",
+          description: "게시글이 성공적으로 삭제되었습니다.",
+        });
+        navigate("/");
+      },
+      onError: (error) => {
+        toast({
+          title: "삭제 실패",
+          description: error.message,
+          variant: "destructive",
+        });
+      },
+    });
   };
 
   const formatDate = (dateString: string) => {
@@ -67,9 +64,9 @@ const PostDetail = () => {
     });
   };
 
-  const isAuthor = user && post && user.id === post.author_id;
+  const isAuthor = user && post && user.id === post.authorId;
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
@@ -86,7 +83,7 @@ const PostDetail = () => {
         <Card className="max-w-md">
           <CardContent className="py-8 text-center">
             <p className="text-red-600 mb-4">
-              {error || "게시글을 찾을 수 없습니다."}
+              {error?.message || "게시글을 찾을 수 없습니다."}
             </p>
             <Button onClick={() => navigate("/")}>
               목록으로 돌아가기
@@ -126,11 +123,11 @@ const PostDetail = () => {
                 <Button 
                   variant="destructive" 
                   onClick={handleDelete}
-                  disabled={isDeleting}
+                  disabled={deletePostMutation.isPending}
                   className="flex items-center space-x-2"
                 >
                   <Trash2 className="w-4 h-4" />
-                  <span>{isDeleting ? "삭제 중..." : "삭제"}</span>
+                  <span>{deletePostMutation.isPending ? "삭제 중..." : "삭제"}</span>
                 </Button>
               </div>
             )}
@@ -154,19 +151,15 @@ const PostDetail = () => {
             <div className="flex items-center space-x-6 text-sm text-gray-500 mt-4">
               <div className="flex items-center space-x-1">
                 <User className="w-4 h-4" />
-                <span>{post.profiles_2026_01_19_07_12?.username || '익명'}</span>
+                <span>{post.authorName}</span>
               </div>
               <div className="flex items-center space-x-1">
                 <Calendar className="w-4 h-4" />
-                <span>{formatDate(post.created_at)}</span>
+                <span>{formatDate(post.createdAt)}</span>
               </div>
               <div className="flex items-center space-x-1">
                 <Eye className="w-4 h-4" />
                 <span>조회 {post.views}</span>
-              </div>
-              <div className="flex items-center space-x-1">
-                <MessageSquare className="w-4 h-4" />
-                <span>댓글 0</span>
               </div>
             </div>
           </CardHeader>
@@ -181,21 +174,9 @@ const PostDetail = () => {
             </div>
           </CardContent>
         </Card>
-
-        {/* 댓글 섹션 (추후 구현) */}
-        <Card className="mt-8">
-          <CardHeader>
-            <CardTitle className="text-lg">댓글 (0)</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-center py-8 text-gray-500">
-              댓글 기능은 곧 추가될 예정입니다.
-            </div>
-          </CardContent>
-        </Card>
       </main>
     </div>
   );
 };
 
-export default PostDetail;
+export default PostDetailPage;

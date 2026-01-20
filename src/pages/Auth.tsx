@@ -9,7 +9,7 @@ import { useNavigate } from "react-router-dom";
 
 const Auth = () => {
   const [isLoading, setIsLoading] = useState(false);
-  const { signIn, signUp, user } = useAuth();
+  const { user, login, signup } = useAuth();
   const navigate = useNavigate();
 
   // 이미 로그인된 사용자는 홈으로 리다이렉트
@@ -27,13 +27,14 @@ const Auth = () => {
     const email = formData.get("email") as string;
     const password = formData.get("password") as string;
 
-    const { data, error } = await signIn(email, password);
-    
-    if (!error && data) {
+    try {
+      await login({ email, password });
       navigate("/");
+    } catch (error) {
+      // 에러는 AuthContext에서 toast로 표시됨
+    } finally {
+      setIsLoading(false);
     }
-    
-    setIsLoading(false);
   };
 
   const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -45,8 +46,14 @@ const Auth = () => {
     const password = formData.get("password") as string;
     const username = formData.get("username") as string;
 
-    await signUp(email, password, username);
-    setIsLoading(false);
+    try {
+      await signup({ email, password, username });
+      navigate("/");
+    } catch (error) {
+      // 에러는 AuthContext에서 toast로 표시됨
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -119,7 +126,8 @@ const Auth = () => {
                     id="signup-password"
                     name="password"
                     type="password"
-                    placeholder="비밀번호를 입력하세요"
+                    placeholder="비밀번호를 입력하세요 (최소 6자)"
+                    minLength={6}
                     required
                   />
                 </div>

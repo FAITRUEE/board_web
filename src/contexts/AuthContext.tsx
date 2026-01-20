@@ -1,15 +1,14 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { User, Session } from '@supabase/supabase-js';
-import { supabase } from '@/integrations/supabase/client';
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { User, LoginRequest, SignupRequest } from '@/types/auth';
+import * as authService from '@/services/authService';
 import { useToast } from '@/hooks/use-toast';
 
 interface AuthContextType {
   user: User | null;
-  session: Session | null;
-  loading: boolean;
-  signUp: (email: string, password: string, username: string) => Promise<{ data: any; error: any }>;
-  signIn: (email: string, password: string) => Promise<{ data: any; error: any }>;
-  signOut: () => Promise<void>;
+  isLoading: boolean;
+  login: (request: LoginRequest) => Promise<void>;
+  signup: (request: SignupRequest) => Promise<void>;
+  logout: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -28,117 +27,81 @@ interface AuthProviderProps {
 
 export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
 
+  // 초기 로드 시 로컬스토리지에서 토큰 확인
   useEffect(() => {
-    // 초기 세션 가져오기
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
+    const initAuth = () => {
+      const currentUser = authService.getCurrentUser();
+      setUser(currentUser);
+      setIsLoading(false);
+    };
 
-    // 인증 상태 변경 리스너
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-        setLoading(false);
-      }
-    );
-
-    return () => subscription.unsubscribe();
+    initAuth();
   }, []);
 
-  const signUp = async (email: string, password: string, username: string) => {
+  const login = async (request: LoginRequest) => {
     try {
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/`,
-          data: {
-            username,
-            full_name: username
-          }
-        }
-      });
-
-      if (error) throw error;
-
+      const response = await authService.login(request);
+      authService.setToken(response.token);
+      setUser(response.user);
+      
       toast({
-        title: "회원가입 성공",
-        description: "이메일을 확인하고 인증 링크를 클릭해주세요.",
+        title: '로그인 성공',
+        description: `환영합니다, ${response.user.username}님!`,
       });
-
-      return { data, error: null };
     } catch (error: any) {
       toast({
-        title: "회원가입 실패",
-        description: error.message,
-        variant: "destructive",
+        title: '로그인 실패',
+        description: error.message || '이메일 또는 비밀번호가 올바르지 않습니다.',
+        variant: 'destructive',
       });
-      return { data: null, error };
+      throw error;
     }
   };
 
-  const signIn = async (email: string, password: string) => {
+  const signup = async (request: SignupRequest) => {
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (error) throw error;
-
+      const response = await authService.signup(request);
+      authService.setToken(response.token);
+      setUser(response.user);
+      
       toast({
-        title: "로그인 성공",
-        description: "환영합니다!",
+        title: '회원가입 성공',
+        description: `환영합니다, ${response.user.username}님!`,
       });
-
-      return { data, error: null };
     } catch (error: any) {
       toast({
-        title: "로그인 실패",
-        description: error.message,
-        variant: "destructive",
+        title: '회원가입 실패',
+        description: error.message || '회원가입 중 오류가 발생했습니다.',
+        variant: 'destructive',
       });
-      return { data: null, error };
+      throw error;
     }
   };
 
-  const signOut = async () => {
-    try {
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
-
-      toast({
-        title: "로그아웃 완료",
-        description: "안전하게 로그아웃되었습니다.",
-      });
-    } catch (error: any) {
-      toast({
-        title: "로그아웃 실패",
-        description: error.message,
-        variant: "destructive",
-      });
-    }
+  const logout = () => {
+    authService.removeToken();
+    setUser(null);
+    
+    toast({
+      title: '로그아웃',
+      description: '안전하게 로그아웃되었습니다.',
+    });
   };
 
   const value = {
     user,
-    session,
-    loading,
-    signUp,
-    signIn,
-    signOut,
+    isLoading,
+    login,
+    signup,
+    logout,
   };
 
   return (
     <AuthContext.Provider value={value}>
-      {children}
+      {!isLoading && children}
     </AuthContext.Provider>
   );
 };

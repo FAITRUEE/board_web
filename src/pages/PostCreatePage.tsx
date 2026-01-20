@@ -5,33 +5,16 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { ArrowLeft, Save } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { useState, useEffect } from "react";
+import { useCreatePost } from "@/hooks/usePosts";
 import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/contexts/AuthContext";
-import { usePosts } from "@/hooks/usePosts";
 
-const PostWrite = () => {
+const PostCreatePage = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { user } = useAuth();
-  const { createPost } = usePosts();
-  const [isLoading, setIsLoading] = useState(false);
-
-  // 로그인하지 않은 사용자는 로그인 페이지로 리다이렉트
-  useEffect(() => {
-    if (!user) {
-      toast({
-        title: "로그인 필요",
-        description: "게시글을 작성하려면 로그인해주세요.",
-        variant: "destructive",
-      });
-      navigate("/auth");
-    }
-  }, [user, navigate, toast]);
+  const createPostMutation = useCreatePost();
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setIsLoading(true);
 
     const formData = new FormData(e.currentTarget);
     const title = formData.get("title") as string;
@@ -43,50 +26,48 @@ const PostWrite = () => {
         description: "제목과 내용을 모두 입력해주세요.",
         variant: "destructive",
       });
-      setIsLoading(false);
       return;
     }
 
-    const { data, error } = await createPost(title.trim(), content.trim());
-
-    if (error) {
-      toast({
-        title: "게시글 작성 실패",
-        description: error,
-        variant: "destructive",
-      });
-    } else {
-      toast({
-        title: "게시글 작성 완료",
-        description: "게시글이 성공적으로 작성되었습니다.",
-      });
-      navigate("/");
-    }
-
-    setIsLoading(false);
+    createPostMutation.mutate(
+      {
+        title: title.trim(),
+        content: content.trim(),
+      },
+      {
+        onSuccess: () => {
+          toast({
+            title: "게시글 작성 완료",
+            description: "게시글이 성공적으로 작성되었습니다.",
+          });
+          navigate("/");
+        },
+        onError: (error) => {
+          toast({
+            title: "게시글 작성 실패",
+            description: error.message,
+            variant: "destructive",
+          });
+        },
+      }
+    );
   };
-
-  if (!user) {
-    return null; // 리다이렉트 중이므로 아무것도 렌더링하지 않음
-  }
 
   return (
     <div className="min-h-screen bg-gray-50">
       {/* 헤더 */}
       <header className="bg-white shadow-sm border-b">
         <div className="max-w-4xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <Button 
-                variant="ghost" 
-                onClick={() => navigate("/")}
-                className="flex items-center space-x-2"
-              >
-                <ArrowLeft className="w-4 h-4" />
-                <span>목록으로</span>
-              </Button>
-              <h1 className="text-xl font-semibold">게시글 작성</h1>
-            </div>
+          <div className="flex items-center space-x-4">
+            <Button 
+              variant="ghost" 
+              onClick={() => navigate("/")}
+              className="flex items-center space-x-2"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span>목록으로</span>
+            </Button>
+            <h1 className="text-xl font-semibold">게시글 작성</h1>
           </div>
         </div>
       </header>
@@ -129,13 +110,13 @@ const PostWrite = () => {
                   type="button" 
                   variant="outline" 
                   onClick={() => navigate("/")}
-                  disabled={isLoading}
+                  disabled={createPostMutation.isPending}
                 >
                   취소
                 </Button>
-                <Button type="submit" disabled={isLoading}>
+                <Button type="submit" disabled={createPostMutation.isPending}>
                   <Save className="w-4 h-4 mr-2" />
-                  {isLoading ? "저장 중..." : "게시글 저장"}
+                  {createPostMutation.isPending ? "저장 중..." : "게시글 저장"}
                 </Button>
               </div>
             </form>
@@ -146,4 +127,4 @@ const PostWrite = () => {
   );
 };
 
-export default PostWrite;
+export default PostCreatePage;

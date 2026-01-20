@@ -3,31 +3,33 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { PlusCircle, Search, User, Calendar, MessageSquare, LogOut } from "lucide-react";
+import { PlusCircle, Search, User, Calendar, Eye, LogOut } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePosts } from "@/hooks/usePosts";
 
-const Index = () => {
+const PostListPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const navigate = useNavigate();
-  const { user, signOut } = useAuth();
-  const { posts, loading, error } = usePosts();
+  const { user, logout } = useAuth();
+  const { data, isLoading, error } = usePosts();
+
+  const posts = data?.posts || [];
 
   const filteredPosts = posts.filter(post =>
     post.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
     post.content.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const handlePostClick = (postId: string) => {
-    navigate(`/post/${postId}`);
+  const handlePostClick = (postId: number) => {
+    navigate(`/posts/${postId}`);
   };
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('ko-KR');
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
@@ -43,7 +45,7 @@ const Index = () => {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <Card className="max-w-md">
           <CardContent className="py-8 text-center">
-            <p className="text-red-600 mb-4">오류가 발생했습니다: {error}</p>
+            <p className="text-red-600 mb-4">오류가 발생했습니다: {error.message}</p>
             <Button onClick={() => window.location.reload()}>
               다시 시도
             </Button>
@@ -61,24 +63,24 @@ const Index = () => {
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
               <h1 className="text-2xl font-bold text-gray-900">게시판 시스템</h1>
-              <Badge variant="secondary">Beta</Badge>
+              <Badge variant="secondary">JWT Auth</Badge>
             </div>
             <div className="flex items-center space-x-4">
               {user ? (
                 <>
                   <span className="text-sm text-gray-600">
-                    환영합니다, {user.email}님
+                    환영합니다, {user.username}님
                   </span>
                   <Button 
                     variant="outline" 
-                    onClick={signOut}
+                    onClick={logout}
                     className="flex items-center space-x-2"
                   >
                     <LogOut className="w-4 h-4" />
                     <span>로그아웃</span>
                   </Button>
                   <Button 
-                    onClick={() => navigate("/write")}
+                    onClick={() => navigate("/posts/create")}
                     className="flex items-center space-x-2"
                   >
                     <PlusCircle className="w-4 h-4" />
@@ -129,7 +131,7 @@ const Index = () => {
                   <div>
                     <p className="text-gray-500 mb-4">아직 게시글이 없습니다.</p>
                     {user && (
-                      <Button onClick={() => navigate("/write")}>
+                      <Button onClick={() => navigate("/posts/create")}>
                         첫 번째 게시글 작성하기
                       </Button>
                     )}
@@ -152,8 +154,9 @@ const Index = () => {
                       <CardTitle className="text-lg hover:text-blue-600 transition-colors">
                         {post.title}
                       </CardTitle>
-                      <Badge variant="outline" className="ml-2">
-                        조회 {post.views}
+                      <Badge variant="outline" className="ml-2 flex items-center space-x-1">
+                        <Eye className="w-3 h-3" />
+                        <span>{post.views}</span>
                       </Badge>
                     </div>
                     <CardDescription className="line-clamp-2">
@@ -164,22 +167,14 @@ const Index = () => {
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="pt-0">
-                    <div className="flex items-center justify-between text-sm text-gray-500">
-                      <div className="flex items-center space-x-4">
-                        <div className="flex items-center space-x-1">
-                          <User className="w-4 h-4" />
-                          <span>
-                            {post.profiles_2026_01_19_07_12?.username || '익명'}
-                          </span>
-                        </div>
-                        <div className="flex items-center space-x-1">
-                          <Calendar className="w-4 h-4" />
-                          <span>{formatDate(post.created_at)}</span>
-                        </div>
+                    <div className="flex items-center space-x-4 text-sm text-gray-500">
+                      <div className="flex items-center space-x-1">
+                        <User className="w-4 h-4" />
+                        <span>{post.authorName}</span>
                       </div>
                       <div className="flex items-center space-x-1">
-                        <MessageSquare className="w-4 h-4" />
-                        <span>댓글 0</span>
+                        <Calendar className="w-4 h-4" />
+                        <span>{formatDate(post.createdAt)}</span>
                       </div>
                     </div>
                   </CardContent>
@@ -188,14 +183,9 @@ const Index = () => {
             </div>
           )}
         </div>
-
-        {/* 페이지네이션 (추후 구현) */}
-        <div className="mt-8 flex justify-center">
-          <p className="text-gray-500 text-sm">더 많은 기능이 곧 추가됩니다!</p>
-        </div>
       </main>
     </div>
   );
 };
 
-export default Index;
+export default PostListPage;
