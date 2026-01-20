@@ -62,3 +62,10 @@ export const incrementViews = async (id: number): Promise<void> => {
     method: 'POST',
   });
 };
+
+// 좋아요 토글
+export const toggleLike = async (id: number): Promise<{ isLiked: boolean; likeCount: number }> => {
+  return fetchAPI<{ isLiked: boolean; likeCount: number }>(`/posts/${id}/like`, {
+    method: 'POST',
+  });
+};
