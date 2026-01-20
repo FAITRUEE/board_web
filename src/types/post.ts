@@ -5,6 +5,9 @@ export interface Post {
   authorId: number;
   authorName: string;
   views: number;
+  likeCount: number;
+  commentCount: number;
+  isLiked: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -24,4 +27,5 @@ export interface PostListResponse {
   total: number;
   page: number;
   size: number;
+  totalPages: number;
 }
