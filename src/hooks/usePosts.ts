@@ -72,3 +72,17 @@ export const useIncrementViews = () => {
     },
   });
 };
+
+// 좋아요 토글 훅
+export const useToggleLike = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: number) => postService.toggleLike(id),
+    onSuccess: (_, id) => {
+      // 해당 게시글과 목록 새로고침
+      queryClient.invalidateQueries({ queryKey: ['post', id] });
+      queryClient.invalidateQueries({ queryKey: ['posts'] });
+    },
+  });
+};
