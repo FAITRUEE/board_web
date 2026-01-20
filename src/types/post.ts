@@ -10,11 +10,25 @@ export interface Post {
   isLiked: boolean;
   createdAt: string;
   updatedAt: string;
+  attachments?: PostAttachment[];  
+  isSecret: boolean;  
+}
+
+export interface PostAttachment {  
+  id: number;
+  originalFileName: string;
+  storedFileName: string;
+  fileSize: number;
+  contentType: string;
+  uploadedAt: string;
 }
 
 export interface CreatePostRequest {
   title: string;
   content: string;
+  files?: File[]; 
+  isSecret?: boolean; 
+  secretPassword?: string;  
 }
 
 export interface UpdatePostRequest {

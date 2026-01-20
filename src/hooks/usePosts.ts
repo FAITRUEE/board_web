@@ -2,11 +2,15 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import * as postService from '@/services/postService';
 import { CreatePostRequest, UpdatePostRequest } from '@/types/post';
 
-// 게시글 목록 조회 훅
-export const usePosts = (page: number = 0, size: number = 10) => {
+// 게시글 목록 조회 훅 (정렬 추가)
+export const usePosts = (
+  page: number = 0, 
+  size: number = 10, 
+  sort?: string  // 정렬 파라미터 추가
+) => {
   return useQuery({
-    queryKey: ['posts', page, size],
-    queryFn: () => postService.getPosts(page, size),
+    queryKey: ['posts', page, size, sort],  // queryKey에 sort 추가
+    queryFn: () => postService.getPosts(page, size, sort),
   });
 };
 
@@ -54,8 +58,9 @@ export const useDeletePost = () => {
   return useMutation({
     mutationFn: (id: number) => postService.deletePost(id),
     onSuccess: () => {
-      // 게시글 목록 새로고침
+      // ✅ 삭제 후 게시글 목록만 새로고침
       queryClient.invalidateQueries({ queryKey: ['posts'] });
+    
     },
   });
 };

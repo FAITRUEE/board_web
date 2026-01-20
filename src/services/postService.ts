@@ -24,8 +24,16 @@ async function fetchAPI<T>(endpoint: string, options?: RequestInit): Promise<T> 
 }
 
 // 게시글 목록 조회
-export const getPosts = async (page: number = 0, size: number = 10): Promise<PostListResponse> => {
-  return fetchAPI<PostListResponse>(`/posts?page=${page}&size=${size}`);
+export const getPosts = async (
+  page: number = 0, 
+  size: number = 10, 
+  sort?: string
+): Promise<PostListResponse> => {
+  let url = `/posts?page=${page}&size=${size}`;
+  if (sort) {
+    url += `&sort=${sort}`;
+  }
+  return fetchAPI<PostListResponse>(url);
 };
 
 // 게시글 상세 조회
@@ -33,12 +41,45 @@ export const getPost = async (id: number): Promise<Post> => {
   return fetchAPI<Post>(`/posts/${id}`);
 };
 
-// 게시글 작성
+// 게시글 작성 (파일 업로드 포함)
 export const createPost = async (request: CreatePostRequest): Promise<Post> => {
-  return fetchAPI<Post>('/posts', {
+  const token = localStorage.getItem('token');
+  const formData = new FormData();
+  
+  formData.append('title', request.title);
+  formData.append('content', request.content);
+  
+  // ✅ 비밀글 정보 추가
+  if (request.isSecret !== undefined) {
+    formData.append('isSecret', String(request.isSecret));
+  }
+  
+  if (request.secretPassword) {
+    formData.append('secretPassword', request.secretPassword);
+  }
+  
+  // 파일 추가
+  if (request.files && request.files.length > 0) {
+    request.files.forEach(file => {
+      formData.append('files', file);
+    });
+  }
+
+  const response = await fetch(`${API_BASE_URL}/posts`, {
     method: 'POST',
-    body: JSON.stringify(request),
+    headers: {
+      ...(token && { 'Authorization': `Bearer ${token}` }),
+      // Content-Type을 설정하지 않음 (브라우저가 자동으로 multipart/form-data로 설정)
+    },
+    body: formData,
   });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ message: '서버 오류가 발생했습니다.' }));
+    throw new Error(error.message || `HTTP error! status: ${response.status}`);
+  }
+
+  return response.json();
 };
 
 // 게시글 수정
@@ -51,16 +92,40 @@ export const updatePost = async (id: number, request: UpdatePostRequest): Promis
 
 // 게시글 삭제
 export const deletePost = async (id: number): Promise<void> => {
-  return fetchAPI<void>(`/posts/${id}`, {
+  const token = localStorage.getItem('token');
+  
+  const response = await fetch(`${API_BASE_URL}/posts/${id}`, {
     method: 'DELETE',
+    headers: {
+      ...(token && { 'Authorization': `Bearer ${token}` }),
+    },
   });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ message: '서버 오류가 발생했습니다.' }));
+    throw new Error(error.message || `HTTP error! status: ${response.status}`);
+  }
+
+  // 204 No Content 응답이므로 JSON 파싱하지 않음
 };
 
 // 조회수 증가
 export const incrementViews = async (id: number): Promise<void> => {
-  return fetchAPI<void>(`/posts/${id}/views`, {
+  const token = localStorage.getItem('token');
+  
+  const response = await fetch(`${API_BASE_URL}/posts/${id}/views`, {
     method: 'POST',
+    headers: {
+      ...(token && { 'Authorization': `Bearer ${token}` }),
+    },
   });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ message: '서버 오류가 발생했습니다.' }));
+    throw new Error(error.message || `HTTP error! status: ${response.status}`);
+  }
+
+  // 204 No Content 응답이므로 JSON 파싱하지 않음
 };
 
 // 좋아요 토글
@@ -68,4 +133,30 @@ export const toggleLike = async (id: number): Promise<{ isLiked: boolean; likeCo
   return fetchAPI<{ isLiked: boolean; likeCount: number }>(`/posts/${id}/like`, {
     method: 'POST',
   });
+};
+
+// 첨부파일 다운로드
+export const downloadAttachment = (fileName: string): string => {
+  return `${API_BASE_URL}/posts/attachments/${fileName}`;
+};
+
+// 비밀글 비밀번호 확인
+export const verifySecretPost = async (id: number, password: string): Promise<Post> => {
+  const token = localStorage.getItem('token');
+  
+  const response = await fetch(`${API_BASE_URL}/posts/${id}/verify-password`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token && { 'Authorization': `Bearer ${token}` }),
+    },
+    body: JSON.stringify({ password }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ message: '비밀번호가 일치하지 않습니다.' }));
+    throw new Error(error.message || '비밀번호 확인 실패');
+  }
+
+  return response.json();
 };

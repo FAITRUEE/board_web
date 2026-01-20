@@ -3,18 +3,23 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { PlusCircle, Search, User, Calendar, Eye, LogOut, Heart, MessageSquare } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { PlusCircle, Search, User, Calendar, Eye, LogOut, Heart, MessageSquare, RefreshCw, Lock } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePosts } from "@/hooks/usePosts";
 import { Pagination } from "@/components/board/Pagination";
+import { useQueryClient } from "@tanstack/react-query";
+import logo from "../assets/logo.png";
 
 const PostListPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(0);
+  const [sortBy, setSortBy] = useState("createdAt,desc");
   const navigate = useNavigate();
   const { user, logout } = useAuth();
-  const { data, isLoading, error } = usePosts(currentPage, 10);
+  const queryClient = useQueryClient();
+  const { data, isLoading, error, refetch } = usePosts(currentPage, 10, sortBy);
 
   const posts = data?.posts || [];
   const totalPages = data?.totalPages || 0;
@@ -30,6 +35,15 @@ const PostListPage = () => {
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('ko-KR');
+  };
+
+  const handleRefresh = () => {
+    refetch();
+  };
+
+  const handleSortChange = (value: string) => {
+    setSortBy(value);
+    setCurrentPage(0);
   };
 
   if (isLoading) {
@@ -65,7 +79,8 @@ const PostListPage = () => {
         <div className="max-w-6xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
-              <h1 className="text-2xl font-bold text-gray-900">게시판 시스템</h1>
+              <img src={logo} alt="logo" className="w-9 h-9" />
+              <h1 className="text-2xl font-bold text-gray-900">게시판</h1>
               <Badge variant="secondary">CRUD Board</Badge>
             </div>
             <div className="flex items-center space-x-4">
@@ -105,9 +120,9 @@ const PostListPage = () => {
 
       {/* 메인 컨텐츠 */}
       <main className="max-w-6xl mx-auto px-4 py-8">
-        {/* 검색 바 */}
-        <div className="mb-8">
-          <div className="relative max-w-md">
+        {/* 검색 바 및 정렬 */}
+        <div className="mb-8 flex items-center gap-4">
+          <div className="relative flex-1 max-w-md">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
             <Input
               type="text"
@@ -117,6 +132,29 @@ const PostListPage = () => {
               className="pl-10"
             />
           </div>
+          
+          {/* 정렬 선택 */}
+          <Select value={sortBy} onValueChange={handleSortChange}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="정렬 기준" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="createdAt,desc">최신순</SelectItem>
+              <SelectItem value="createdAt,asc">오래된순</SelectItem>
+              <SelectItem value="views,desc">조회순</SelectItem>
+              <SelectItem value="likeCount,desc">좋아요순</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {/* 새로고침 버튼 */}
+          <Button 
+            variant="outline" 
+            size="icon"
+            onClick={handleRefresh}
+            title="새로고침"
+          >
+            <RefreshCw className="w-4 h-4" />
+          </Button>
         </div>
 
         {/* 게시글 목록 */}
@@ -150,14 +188,27 @@ const PostListPage = () => {
                 {filteredPosts.map((post) => (
                   <Card 
                     key={post.id} 
-                    className="hover:shadow-md transition-shadow cursor-pointer"
+                    className={`hover:shadow-md transition-shadow cursor-pointer ${
+                      post.isSecret ? 'border-orange-200 bg-orange-50/30' : ''
+                    }`}
                     onClick={() => handlePostClick(post.id)}
                   >
                     <CardHeader className="pb-3">
                       <div className="flex items-start justify-between">
-                        <CardTitle className="text-lg hover:text-blue-600 transition-colors">
-                          {post.title}
-                        </CardTitle>
+                        <div className="flex items-center gap-2 flex-1">
+                          {/* ✅ 비밀글 아이콘 */}
+                          {post.isSecret && (
+                            <Lock className="w-4 h-4 text-orange-600 flex-shrink-0" />
+                          )}
+                          <CardTitle className="text-lg hover:text-blue-600 transition-colors">
+                            {post.title}
+                          </CardTitle>
+                          {post.isSecret && (
+                            <Badge variant="outline" className="ml-2 bg-orange-100 text-orange-700 border-orange-300">
+                              비밀글
+                            </Badge>
+                          )}
+                        </div>
                         <div className="flex items-center space-x-2 ml-2">
                           <Badge variant="outline" className="flex items-center space-x-1">
                             <Eye className="w-3 h-3" />
