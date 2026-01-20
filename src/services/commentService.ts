@@ -43,9 +43,20 @@ export const updateComment = async (postId: number, commentId: number, request: 
   });
 };
 
-// 댓글 삭제
 export const deleteComment = async (postId: number, commentId: number): Promise<void> => {
-  return fetchAPI<void>(`/posts/${postId}/comments/${commentId}`, {
+  const token = localStorage.getItem('token');
+  
+  const response = await fetch(`${API_BASE_URL}/posts/${postId}/comments/${commentId}`, {
     method: 'DELETE',
+    headers: {
+      ...(token && { 'Authorization': `Bearer ${token}` }),
+    },
   });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ message: '서버 오류가 발생했습니다.' }));
+    throw new Error(error.message || `HTTP error! status: ${response.status}`);
+  }
+  
+  // 204 No Content 응답이므로 JSON 파싱하지 않음
 };
