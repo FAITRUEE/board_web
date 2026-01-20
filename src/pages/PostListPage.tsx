@@ -216,12 +216,14 @@ const PostListPage = () => {
                           </Badge>
                         </div>
                       </div>
-                      <CardDescription className="line-clamp-2">
-                        {post.content.length > 100 
+                      <CardDescription 
+                        className="line-clamp-2"
+                        dangerouslySetInnerHTML={{ 
+                          __html: post.content.length > 100 
                           ? `${post.content.substring(0, 100)}...` 
-                          : post.content
-                        }
-                      </CardDescription>
+                          : post.content 
+                        }}
+                      />
                     </CardHeader>
                     <CardContent className="pt-0">
                       <div className="flex items-center justify-between text-sm text-gray-500">

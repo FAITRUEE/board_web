@@ -11,6 +11,7 @@ import { useNavigate } from "react-router-dom";
 import { useCreatePost } from "@/hooks/usePosts";
 import { useToast } from "@/hooks/use-toast";
 import { DrawingCanvas } from "@/components/board/DrawingCanvas";
+import { RichTextEditor } from "@/components/board/RichTextEditor";
 
 const PostCreatePage = () => {
   const navigate = useNavigate();
@@ -156,14 +157,11 @@ const PostCreatePage = () => {
 
               <div className="space-y-2">
                 <Label htmlFor="content">내용</Label>
-                <Textarea
-                  id="content"
-                  name="content"
+                <RichTextEditor
                   value={content}
-                  onChange={(e) => setContent(e.target.value)}
+                  onChange={setContent}
                   placeholder="게시글 내용을 입력하세요"
-                  className="min-h-[200px]"
-                  required
+                  minHeight="300px"
                 />
               </div>
 

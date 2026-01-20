@@ -12,6 +12,7 @@ import { CommentList } from "@/components/board/CommentList";
 import { downloadAttachment, verifySecretPost } from "@/services/postService";
 import { SecretPasswordDialog } from "@/components/board/SecretPasswordDialog";
 import { Post } from "@/types/post";
+import { RichTextEditor } from "@/components/board/RichTextEditor";
 
 const PostDetailPage = () => {
   const navigate = useNavigate();
@@ -39,13 +40,14 @@ const PostDetailPage = () => {
     }
   }, [postId, isSecretLocked]);
 
-  useEffect(() => {
-    // 비밀글이고, 작성자가 아니며, 내용이 "🔒 비밀글입니다."인 경우
-    if (post && post.isSecret && post.content === "🔒 비밀글입니다.") {
-      setIsSecretLocked(true);
-      setShowPasswordDialog(true);
-    }
-  }, [post]);
+useEffect(() => {
+  // 비밀글이고, 작성자가 아니며, 내용이 "🔒 비밀글입니다."인 경우
+  // ✅ 단, 이미 verifiedPost가 있으면 (비밀번호 확인 완료) 실행 안 함
+  if (post && post.isSecret && post.content === "🔒 비밀글입니다." && !verifiedPost) {
+    setIsSecretLocked(true);
+    setShowPasswordDialog(true);
+  }
+}, [post, verifiedPost]); // ✅ verifiedPost 의존성 추가
 
   const handleEdit = () => {
     navigate(`/posts/${id}/edit`);
@@ -313,9 +315,10 @@ const handleDelete = async () => {
             ) : (
               <>
                 <div className="prose max-w-none">
-                  <div className="whitespace-pre-wrap text-gray-700 leading-relaxed">
-                    {displayPost.content}
-                  </div>
+                  <div 
+                    className="prose max-w-none text-gray-700 leading-relaxed"
+                    dangerouslySetInnerHTML={{ __html: displayPost.content }}
+                  />
                 </div>
 
                 {/* 첨부파일 섹션 */}
