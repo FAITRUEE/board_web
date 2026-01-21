@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -29,6 +29,27 @@ const PostCreatePage = () => {
   const [secretPassword, setSecretPassword] = useState("");
   const [categoryId, setCategoryId] = useState<number | undefined>();
   const [tags, setTags] = useState<string[]>([]); 
+
+  // ✅ 로그인 확인
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    const user = localStorage.getItem('user');
+    
+    console.log('🔐 로그인 상태 확인:', {
+      hasToken: !!token,
+      hasUser: !!user,
+      tokenPreview: token ? token.substring(0, 20) + '...' : 'null'
+    });
+
+    if (!token) {
+      toast({
+        title: "로그인 필요",
+        description: "게시글을 작성하려면 로그인이 필요합니다.",
+        variant: "destructive",
+      });
+      navigate('/auth');
+    }
+  }, [navigate, toast]);
 
   const handleAIGenerate = (generatedTitle: string, generatedContent: string) => {
     setTitle(generatedTitle);
@@ -74,6 +95,31 @@ const PostCreatePage = () => {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
+    // ✅ 디버깅: 제출 데이터 로그
+    console.log('=== 게시글 작성 요청 ===');
+    console.log('Title:', title);
+    console.log('Content:', content);
+    console.log('CategoryId:', categoryId);
+    console.log('Tags:', tags);
+    console.log('IsSecret:', isSecret);
+    console.log('Files:', files.length);
+    console.log('Drawings:', drawings.length);
+
+    // ✅ 토큰 재확인
+    const token = localStorage.getItem('token');
+    const user = localStorage.getItem('user');
+    console.log('UserDetails:', user ? JSON.parse(user) : null);
+
+    if (!token) {
+      toast({
+        title: "인증 오류",
+        description: "로그인 세션이 만료되었습니다. 다시 로그인해주세요.",
+        variant: "destructive",
+      });
+      navigate('/auth');
+      return;
+    }
+
     if (!title.trim() || !content.trim()) {
       toast({
         title: "입력 오류",
@@ -94,6 +140,8 @@ const PostCreatePage = () => {
 
     const allFiles = [...files, ...drawings];
 
+    console.log('📤 Mutation 시작...');
+
     createPostMutation.mutate(
       {
         title: title.trim(),
@@ -105,7 +153,8 @@ const PostCreatePage = () => {
         tags,
       },
       {
-        onSuccess: () => {
+        onSuccess: (data) => {
+          console.log('✅ 게시글 작성 성공:', data);
           toast({
             title: "게시글 작성 완료",
             description: "게시글이 성공적으로 작성되었습니다.",
@@ -113,11 +162,25 @@ const PostCreatePage = () => {
           navigate("/");
         },
         onError: (error) => {
-          toast({
-            title: "게시글 작성 실패",
-            description: error.message,
-            variant: "destructive",
-          });
+          console.error('❌ 게시글 작성 실패:', error);
+          
+          // ✅ 401 에러 처리
+          if (error.message.includes('401') || error.message.includes('Unauthorized')) {
+            toast({
+              title: "인증 실패",
+              description: "로그인이 만료되었습니다. 다시 로그인해주세요.",
+              variant: "destructive",
+            });
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            navigate('/auth');
+          } else {
+            toast({
+              title: "게시글 작성 실패",
+              description: error.message,
+              variant: "destructive",
+            });
+          }
         },
       }
     );
@@ -156,12 +219,13 @@ const PostCreatePage = () => {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
-              {/* ✅ 카테고리 선택 추가 */}
+              {/* ✅ 카테고리 선택 */}
               <CategorySelect 
                 value={categoryId}
                 onChange={setCategoryId}
               />
 
+              {/* ✅ 태그 입력 */}
               <TagInput
                 value={tags}
                 onChange={setTags}

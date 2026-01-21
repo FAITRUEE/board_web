@@ -2,17 +2,23 @@ import { Category, CreateCategoryRequest, UpdateCategoryRequest } from '@/types/
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api';
 
-// API 요청 헬퍼 함수 (JWT 토큰 포함)
+// ✅ 토큰 있을 때만 추가하도록 수정
 async function fetchAPI<T>(endpoint: string, options?: RequestInit): Promise<T> {
   const token = localStorage.getItem('token');
   
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json',
+    ...options?.headers,
+  };
+  
+  // ✅ 토큰이 있을 때만 추가
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  
   const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token && { 'Authorization': `Bearer ${token}` }),
-      ...options?.headers,
-    },
     ...options,
+    headers,
   });
 
   if (!response.ok) {
@@ -25,7 +31,12 @@ async function fetchAPI<T>(endpoint: string, options?: RequestInit): Promise<T> 
 
 // 카테고리 목록 조회
 export const getCategories = async (): Promise<Category[]> => {
-  return fetchAPI<Category[]>('/categories');
+  try {
+    return await fetchAPI<Category[]>('/categories');
+  } catch (error) {
+    console.warn('카테고리 조회 실패:', error);
+    return [];  // ✅ 에러 시 빈 배열 반환
+  }
 };
 
 // 카테고리 상세 조회

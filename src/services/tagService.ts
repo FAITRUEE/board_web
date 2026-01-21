@@ -2,17 +2,23 @@ import { Tag } from '@/types/tag';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api';
 
-// API 요청 헬퍼 함수
+// ✅ 토큰 있을 때만 추가하도록 수정
 async function fetchAPI<T>(endpoint: string, options?: RequestInit): Promise<T> {
   const token = localStorage.getItem('token');
   
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json',
+    ...options?.headers,
+  };
+  
+  // ✅ 토큰이 있을 때만 추가
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  
   const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token && { 'Authorization': `Bearer ${token}` }),
-      ...options?.headers,
-    },
     ...options,
+    headers,
   });
 
   if (!response.ok) {
@@ -25,15 +31,30 @@ async function fetchAPI<T>(endpoint: string, options?: RequestInit): Promise<T> 
 
 // 모든 태그 조회
 export const getTags = async (): Promise<Tag[]> => {
-  return fetchAPI<Tag[]>('/tags');
+  try {
+    return await fetchAPI<Tag[]>('/tags');
+  } catch (error) {
+    console.warn('태그 조회 실패:', error);
+    return [];  // ✅ 에러 시 빈 배열 반환
+  }
 };
 
-// 인기 태그 조회 (상위 20개)
+// 인기 태그 조회
 export const getPopularTags = async (): Promise<Tag[]> => {
-  return fetchAPI<Tag[]>('/tags/popular');
+  try {
+    return await fetchAPI<Tag[]>('/tags/popular');
+  } catch (error) {
+    console.warn('인기 태그 조회 실패:', error);
+    return [];  // ✅ 에러 시 빈 배열 반환
+  }
 };
 
 // 태그 검색
 export const searchTags = async (keyword: string): Promise<Tag[]> => {
-  return fetchAPI<Tag[]>(`/tags/search?keyword=${encodeURIComponent(keyword)}`);
+  try {
+    return await fetchAPI<Tag[]>(`/tags/search?keyword=${encodeURIComponent(keyword)}`);
+  } catch (error) {
+    console.warn('태그 검색 실패:', error);
+    return [];  // ✅ 에러 시 빈 배열 반환
+  }
 };

@@ -7,11 +7,12 @@ export const usePosts = (
   page: number = 0, 
   size: number = 10, 
   sort?: string,
-  categoryId?: number  // ✅ 추가
+  categoryId?: number,
+  tagName?: string  // ✅ 추가
 ) => {
   return useQuery({
-    queryKey: ['posts', page, size, sort, categoryId],  // ✅ queryKey에 categoryId 추가
-    queryFn: () => postService.getPosts(page, size, sort, categoryId),  // ✅ categoryId 전달
+    queryKey: ['posts', page, size, sort, categoryId, tagName],  // ✅ tagName 추가
+    queryFn: () => postService.getPosts(page, size, sort, categoryId, tagName),  // ✅ tagName 전달
   });
 };
 

@@ -1,11 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PlusCircle, Search, User, Calendar, Eye, LogOut, Heart, MessageSquare, RefreshCw, Lock, Settings, X, Pin, TrendingUp } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";  // ✅ useSearchParams 추가
 import { useAuth } from "@/contexts/AuthContext";
 import { usePosts } from "@/hooks/usePosts";
 import { Pagination } from "@/components/board/Pagination";
@@ -16,14 +16,23 @@ import { TagCloud } from "@/components/board/TagCloud";
 import { AdSection } from "@/components/board/AdSection";
 
 const PostListPage = () => {
+  const [searchParams, setSearchParams] = useSearchParams();  // ✅ 추가
+  const navigate = useNavigate();
+  const { user, logout } = useAuth();
+  
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(0);
   const [sortBy, setSortBy] = useState("createdAt,desc");
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | undefined>();
   const [selectedTag, setSelectedTag] = useState<string | undefined>();
-  
-  const navigate = useNavigate();
-  const { user, logout } = useAuth();
+
+  // ✅ URL 파라미터에서 태그 읽기
+  useEffect(() => {
+    const tagFromUrl = searchParams.get('tag');
+    if (tagFromUrl) {
+      setSelectedTag(tagFromUrl);
+    }
+  }, [searchParams]);
   
   // 카테고리 목록 조회
   const { data: categories } = useQuery({
@@ -31,10 +40,16 @@ const PostListPage = () => {
     queryFn: () => categoryService.getCategories(),
   });
 
-  // 게시글 목록 조회
-  const { data, isLoading, error, refetch } = usePosts(currentPage, 10, sortBy, selectedCategoryId);
+  // ✅ 게시글 목록 조회 (태그 필터 포함)
+  const { data, isLoading, error, refetch } = usePosts(
+    currentPage, 
+    10, 
+    sortBy, 
+    selectedCategoryId,
+    selectedTag  // ✅ 태그 전달
+  );
 
-  // 공지사항 및 인기 게시글용 전체 조회 (캐시 없이 항상 최신 데이터)
+  // 공지사항 및 인기 게시글용 전체 조회
   const { data: allPostsData, refetch: refetchAll } = useQuery({
     queryKey: ['allPosts', selectedCategoryId],
     queryFn: async () => {
@@ -52,8 +67,8 @@ const PostListPage = () => {
       const data = await response.json();
       return data;
     },
-    staleTime: 0, // 항상 최신 데이터로
-    gcTime: 0, // 캐시 사용 안 함 (구버전에서는 cacheTime)
+    staleTime: 0,
+    gcTime: 0,
   });
 
   const posts = data?.posts || [];
@@ -71,7 +86,7 @@ const PostListPage = () => {
     .sort((a: any, b: any) => (b.views + b.likeCount * 10) - (a.views + a.likeCount * 10))
     .slice(0, 5);
 
-  // 검색어와 태그 필터링 (공지 제외)
+  // ✅ 검색어만 클라이언트 필터링 (태그는 서버에서 필터링됨)
   const filteredPosts = posts
     .filter(post => !post.tags?.some(tag => tag.name === '공지'))
     .filter(post => {
@@ -79,10 +94,7 @@ const PostListPage = () => {
         post.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
         post.content.toLowerCase().includes(searchTerm.toLowerCase());
       
-      const matchesTag = !selectedTag || 
-        (post.tags && post.tags.some(tag => tag.name === selectedTag));
-      
-      return matchesSearch && matchesTag;
+      return matchesSearch;
     });
 
   const handlePostClick = (postId: number) => {
@@ -112,13 +124,17 @@ const PostListPage = () => {
     setCurrentPage(0);
   };
 
+  // ✅ 태그 클릭 핸들러 수정
   const handleTagClick = (tagName: string) => {
     setSelectedTag(tagName);
+    setSearchParams({ tag: tagName });  // URL에 태그 추가
     setCurrentPage(0);
   };
 
+  // ✅ 태그 필터 해제
   const clearTagFilter = () => {
     setSelectedTag(undefined);
+    setSearchParams({});  // URL에서 태그 제거
   };
 
   if (isLoading) {
@@ -261,7 +277,6 @@ const PostListPage = () => {
                   />
                 </div>
                 
-                {/* 카테고리 필터 */}
                 <Select value={selectedCategoryId?.toString() || "all"} onValueChange={handleCategoryChange}>
                   <SelectTrigger className="w-[200px]">
                     <SelectValue placeholder="카테고리" />
@@ -279,7 +294,6 @@ const PostListPage = () => {
                   </SelectContent>
                 </Select>
                 
-                {/* 정렬 */}
                 <Select value={sortBy} onValueChange={handleSortChange}>
                   <SelectTrigger className="w-[150px]">
                     <SelectValue />
@@ -292,7 +306,6 @@ const PostListPage = () => {
                   </SelectContent>
                 </Select>
 
-                {/* 새로고침 */}
                 <Button 
                   variant="outline" 
                   size="icon"
@@ -327,7 +340,9 @@ const PostListPage = () => {
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-semibold text-gray-900">
-                  {selectedCategoryId 
+                  {selectedTag 
+                    ? `#${selectedTag} 게시글 (${data?.total || 0})`
+                    : selectedCategoryId 
                     ? `${categories?.find(c => c.id === selectedCategoryId)?.name || '카테고리'} 게시글 (${data?.total || 0})`
                     : `전체 게시글 (${data?.total || 0})`
                   }
@@ -373,7 +388,6 @@ const PostListPage = () => {
                                   {post.title}
                                 </CardTitle>
                                 
-                                {/* 카테고리 */}
                                 {post.category && (
                                   <Badge 
                                     variant="outline"
@@ -395,7 +409,6 @@ const PostListPage = () => {
                                 )}
                               </div>
 
-                              {/* 태그들 */}
                               {post.tags && post.tags.length > 0 && (
                                 <div className="flex flex-wrap gap-1 mb-2">
                                   {post.tags.map((tag) => (
@@ -424,7 +437,6 @@ const PostListPage = () => {
                               />
                             </div>
                             
-                            {/* 썸네일 */}
                             {post.attachments && post.attachments.length > 0 && 
                              post.attachments.some(att => att.contentType.startsWith('image/')) && (
                               <div className="flex-shrink-0">
@@ -475,8 +487,8 @@ const PostListPage = () => {
                     ))}
                   </div>
 
-                  {/* 페이지네이션 */}
-                  {!searchTerm && !selectedTag && (
+                  {/* ✅ 페이지네이션 - 검색어만 있을 때 숨김 */}
+                  {!searchTerm && (
                     <div className="mt-8">
                       <Pagination
                         currentPage={currentPage}
@@ -490,10 +502,9 @@ const PostListPage = () => {
             </div>
           </div>
 
-          {/* 오른쪽: 인기 게시글, 태그 클라우드, 광고 (1/4) */}
+          {/* 오른쪽 사이드바 */}
           <div className="lg:col-span-1">
             <div className="sticky top-4 space-y-6">
-              {/* 인기 게시글 */}
               <Card>
                 <CardHeader className="pb-3">
                   <div className="flex items-center gap-2">
