@@ -12,7 +12,6 @@ import { CommentList } from "@/components/board/CommentList";
 import { downloadAttachment, verifySecretPost } from "@/services/postService";
 import { SecretPasswordDialog } from "@/components/board/SecretPasswordDialog";
 import { Post } from "@/types/post";
-import { RichTextEditor } from "@/components/board/RichTextEditor";
 
 const PostDetailPage = () => {
   const navigate = useNavigate();
@@ -31,7 +30,6 @@ const PostDetailPage = () => {
   const [verifiedPost, setVerifiedPost] = useState<Post | null>(null);
   const [isSecretLocked, setIsSecretLocked] = useState(false);
 
-  // 실제로 표시할 게시글 (비밀번호 확인된 경우 verifiedPost 사용)
   const displayPost = verifiedPost || post;
 
   useEffect(() => {
@@ -40,40 +38,37 @@ const PostDetailPage = () => {
     }
   }, [postId, isSecretLocked]);
 
-useEffect(() => {
-  // 비밀글이고, 작성자가 아니며, 내용이 "🔒 비밀글입니다."인 경우
-  // ✅ 단, 이미 verifiedPost가 있으면 (비밀번호 확인 완료) 실행 안 함
-  if (post && post.isSecret && post.content === "🔒 비밀글입니다." && !verifiedPost) {
-    setIsSecretLocked(true);
-    setShowPasswordDialog(true);
-  }
-}, [post, verifiedPost]); // ✅ verifiedPost 의존성 추가
+  useEffect(() => {
+    if (post && post.isSecret && post.content === "🔒 비밀글입니다." && !verifiedPost) {
+      setIsSecretLocked(true);
+      setShowPasswordDialog(true);
+    }
+  }, [post, verifiedPost]);
 
   const handleEdit = () => {
     navigate(`/posts/${id}/edit`);
   };
 
-const handleDelete = async () => {
-  if (!confirm("정말로 이 게시글을 삭제하시겠습니까?")) {
-    return;
-  }
+  const handleDelete = async () => {
+    if (!confirm("정말로 이 게시글을 삭제하시겠습니까?")) {
+      return;
+    }
 
-  try {
-    await deletePostMutation.mutateAsync(postId);
-    toast({
-      title: "게시글 삭제 완료",
-      description: "게시글이 성공적으로 삭제되었습니다.",
-    });
-    // 삭제 성공 즉시 이동 (쿼리 무효화는 백그라운드에서 처리)
-    navigate("/", { replace: true });
-  } catch (error: any) {
-    toast({
-      title: "삭제 실패",
-      description: error.message || "게시글 삭제에 실패했습니다.",
-      variant: "destructive",
-    });
-  }
-};
+    try {
+      await deletePostMutation.mutateAsync(postId);
+      toast({
+        title: "게시글 삭제 완료",
+        description: "게시글이 성공적으로 삭제되었습니다.",
+      });
+      navigate("/", { replace: true });
+    } catch (error: any) {
+      toast({
+        title: "삭제 실패",
+        description: error.message || "게시글 삭제에 실패했습니다.",
+        variant: "destructive",
+      });
+    }
+  };
 
   const handleLike = () => {
     if (!user) {
@@ -196,7 +191,6 @@ const handleDelete = async () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* 비밀번호 확인 다이얼로그 */}
       <SecretPasswordDialog
         open={showPasswordDialog}
         onClose={handlePasswordDialogClose}
@@ -250,6 +244,20 @@ const handleDelete = async () => {
             <div className="flex items-start justify-between">
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-2">
+                  {/* ✅ 카테고리 Badge */}
+                  {displayPost.category && (
+                    <Badge 
+                      variant="outline"
+                      style={{ 
+                        backgroundColor: `${displayPost.category.color}20`,
+                        borderColor: displayPost.category.color,
+                        color: displayPost.category.color
+                      }}
+                    >
+                      <span className="mr-1">{displayPost.category.icon}</span>
+                      {displayPost.category.name}
+                    </Badge>
+                  )}
                   {displayPost.isSecret && (
                     <Badge variant="outline" className="bg-orange-100 text-orange-700 border-orange-300">
                       <Lock className="w-3 h-3 mr-1" />
@@ -279,7 +287,6 @@ const handleDelete = async () => {
                 </div>
               </div>
               
-              {/* 좋아요 버튼 */}
               {!isSecretLocked && (
                 <Button
                   variant="outline"
@@ -314,6 +321,25 @@ const handleDelete = async () => {
               </div>
             ) : (
               <>
+                {/* ✅ 이미지 미리보기 */}
+                {displayPost.attachments && displayPost.attachments.some(att => isImageFile(att.contentType)) && (
+                  <div className="mb-6 space-y-3">
+                    {displayPost.attachments
+                      .filter(att => isImageFile(att.contentType))
+                      .map((attachment) => (
+                        <div key={attachment.id} className="rounded-lg overflow-hidden border">
+                          <img 
+                            src={downloadAttachment(attachment.storedFileName)}
+                            alt={attachment.originalFileName}
+                            className="w-full h-auto"
+                            loading="lazy"
+                          />
+                        </div>
+                      ))
+                    }
+                  </div>
+                )}
+
                 <div className="prose max-w-none">
                   <div 
                     className="prose max-w-none text-gray-700 leading-relaxed"
@@ -321,7 +347,6 @@ const handleDelete = async () => {
                   />
                 </div>
 
-                {/* 첨부파일 섹션 */}
                 {displayPost.attachments && displayPost.attachments.length > 0 && (
                   <div className="mt-8 pt-6 border-t">
                     <h3 className="text-lg font-semibold mb-4">첨부파일 ({displayPost.attachments.length})</h3>
@@ -366,7 +391,6 @@ const handleDelete = async () => {
           </CardContent>
         </Card>
 
-        {/* 댓글 섹션 - 비밀글 잠금 상태에서는 숨김 */}
         {!isSecretLocked && (
           <Card className="mt-8">
             <CardContent className="pt-6">

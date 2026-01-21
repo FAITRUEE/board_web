@@ -27,11 +27,16 @@ async function fetchAPI<T>(endpoint: string, options?: RequestInit): Promise<T> 
 export const getPosts = async (
   page: number = 0, 
   size: number = 10, 
-  sort?: string
+  sort?: string,
+  categoryId?: number  // ✅ 추가
 ): Promise<PostListResponse> => {
   let url = `/posts?page=${page}&size=${size}`;
   if (sort) {
     url += `&sort=${sort}`;
+  }
+  // ✅ 카테고리 필터 추가
+  if (categoryId !== undefined) {
+    url += `&categoryId=${categoryId}`;
   }
   return fetchAPI<PostListResponse>(url);
 };
@@ -49,7 +54,12 @@ export const createPost = async (request: CreatePostRequest): Promise<Post> => {
   formData.append('title', request.title);
   formData.append('content', request.content);
   
-  // ✅ 비밀글 정보 추가
+  // 카테고리 ID 추가
+  if (request.categoryId !== undefined) {
+    formData.append('categoryId', String(request.categoryId));
+  }
+  
+  // 비밀글 정보 추가
   if (request.isSecret !== undefined) {
     formData.append('isSecret', String(request.isSecret));
   }
@@ -69,7 +79,6 @@ export const createPost = async (request: CreatePostRequest): Promise<Post> => {
     method: 'POST',
     headers: {
       ...(token && { 'Authorization': `Bearer ${token}` }),
-      // Content-Type을 설정하지 않음 (브라우저가 자동으로 multipart/form-data로 설정)
     },
     body: formData,
   });
@@ -105,8 +114,6 @@ export const deletePost = async (id: number): Promise<void> => {
     const error = await response.json().catch(() => ({ message: '서버 오류가 발생했습니다.' }));
     throw new Error(error.message || `HTTP error! status: ${response.status}`);
   }
-
-  // 204 No Content 응답이므로 JSON 파싱하지 않음
 };
 
 // 조회수 증가
@@ -124,8 +131,6 @@ export const incrementViews = async (id: number): Promise<void> => {
     const error = await response.json().catch(() => ({ message: '서버 오류가 발생했습니다.' }));
     throw new Error(error.message || `HTTP error! status: ${response.status}`);
   }
-
-  // 204 No Content 응답이므로 JSON 파싱하지 않음
 };
 
 // 좋아요 토글

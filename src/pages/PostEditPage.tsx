@@ -3,13 +3,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { ArrowLeft, Save } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePost, useUpdatePost } from "@/hooks/usePosts";
 import { RichTextEditor } from "@/components/board/RichTextEditor";
+import { CategorySelect } from "@/components/board/CategorySelect";  // ✅ 추가
 
 const PostEditPage = () => {
   const navigate = useNavigate();
@@ -23,11 +23,13 @@ const PostEditPage = () => {
   
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
+  const [categoryId, setCategoryId] = useState<number | undefined>();  // ✅ 추가
 
   useEffect(() => {
     if (post) {
       setTitle(post.title);
       setContent(post.content);
+      setCategoryId(post.category?.id);  // ✅ 카테고리 초기값 설정
       
       // 작성자가 아닌 경우 접근 차단
       if (user && user.id !== post.authorId) {
@@ -59,6 +61,7 @@ const PostEditPage = () => {
         request: {
           title: title.trim(),
           content: content.trim(),
+          categoryId,  // ✅ 카테고리 ID 추가
         },
       },
       {
@@ -138,6 +141,12 @@ const PostEditPage = () => {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
+              {/* ✅ 카테고리 선택 추가 */}
+              <CategorySelect 
+                value={categoryId}
+                onChange={setCategoryId}
+              />
+
               <div className="space-y-2">
                 <Label htmlFor="title">제목</Label>
                 <Input

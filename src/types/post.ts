@@ -1,3 +1,5 @@
+import { Category } from './category';
+
 export interface Post {
   id: number;
   title: string;
@@ -10,11 +12,12 @@ export interface Post {
   isLiked: boolean;
   createdAt: string;
   updatedAt: string;
-  attachments?: PostAttachment[];  
-  isSecret: boolean;  
+  attachments?: PostAttachment[];
+  isSecret: boolean;
+  category?: Category;  // ✅ 카테고리 추가
 }
 
-export interface PostAttachment {  
+export interface PostAttachment {
   id: number;
   originalFileName: string;
   storedFileName: string;
@@ -26,14 +29,16 @@ export interface PostAttachment {
 export interface CreatePostRequest {
   title: string;
   content: string;
-  files?: File[]; 
-  isSecret?: boolean; 
-  secretPassword?: string;  
+  files?: File[];
+  isSecret?: boolean;
+  secretPassword?: string;
+  categoryId?: number;  // ✅ 카테고리 ID 추가
 }
 
 export interface UpdatePostRequest {
   title: string;
   content: string;
+  categoryId?: number;  // ✅ 카테고리 ID 추가
 }
 
 export interface PostListResponse {

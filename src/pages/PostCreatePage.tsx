@@ -12,7 +12,8 @@ import { useCreatePost } from "@/hooks/usePosts";
 import { useToast } from "@/hooks/use-toast";
 import { DrawingCanvas } from "@/components/board/DrawingCanvas";
 import { RichTextEditor } from "@/components/board/RichTextEditor";
-import { AIWritingAssistant } from "@/components/board/AIWritingAssistant";  // ✅ 추가
+import { AIWritingAssistant } from "@/components/board/AIWritingAssistant";
+import { CategorySelect } from "@/components/board/CategorySelect"; 
 
 const PostCreatePage = () => {
   const navigate = useNavigate();
@@ -25,8 +26,8 @@ const PostCreatePage = () => {
   const [drawings, setDrawings] = useState<File[]>([]);
   const [isSecret, setIsSecret] = useState(false);
   const [secretPassword, setSecretPassword] = useState("");
+  const [categoryId, setCategoryId] = useState<number | undefined>();  // ✅ 추가
 
-  // ✅ AI 생성 결과 처리
   const handleAIGenerate = (generatedTitle: string, generatedContent: string) => {
     setTitle(generatedTitle);
     setContent(generatedContent);
@@ -98,6 +99,7 @@ const PostCreatePage = () => {
         files: allFiles.length > 0 ? allFiles : undefined,
         isSecret,
         secretPassword: isSecret ? secretPassword : undefined,
+        categoryId,  // ✅ 카테고리 ID 추가
       },
       {
         onSuccess: () => {
@@ -135,7 +137,6 @@ const PostCreatePage = () => {
               </Button>
               <h1 className="text-xl font-semibold">게시글 작성</h1>
             </div>
-            {/* ✅ AI 작성 도우미 버튼 */}
             <AIWritingAssistant onGenerate={handleAIGenerate} />
           </div>
         </div>
@@ -152,6 +153,12 @@ const PostCreatePage = () => {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
+              {/* ✅ 카테고리 선택 추가 */}
+              <CategorySelect 
+                value={categoryId}
+                onChange={setCategoryId}
+              />
+
               <div className="space-y-2">
                 <Label htmlFor="title">제목</Label>
                 <Input

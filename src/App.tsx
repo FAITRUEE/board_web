@@ -8,6 +8,7 @@ import PostCreatePage from './pages/PostCreatePage';
 import PostEditPage from './pages/PostEditPage';
 import Auth from './pages/Auth';
 import NotFound from './pages/NotFound';
+import CategoryManagePage from "@/pages/CategoryManagePage";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -65,6 +66,7 @@ function App() {
                 } 
               />
               <Route path="*" element={<NotFound />} />
+              <Route path="/categories/manage" element={<CategoryManagePage />} />
             </Routes>
           </div>
           <Toaster />

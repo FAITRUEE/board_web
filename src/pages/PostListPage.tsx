@@ -4,30 +4,43 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { PlusCircle, Search, User, Calendar, Eye, LogOut, Heart, MessageSquare, RefreshCw, Lock } from "lucide-react";
+import { PlusCircle, Search, User, Calendar, Eye, LogOut, Heart, MessageSquare, RefreshCw, Lock, Settings } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePosts } from "@/hooks/usePosts";
 import { Pagination } from "@/components/board/Pagination";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, useQuery } from "@tanstack/react-query";
+import * as categoryService from "@/services/categoryService";
 import logo from "../assets/logo.png";
 
 const PostListPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(0);
   const [sortBy, setSortBy] = useState("createdAt,desc");
+  const [selectedCategoryId, setSelectedCategoryId] = useState<number | undefined>();  // ✅ 추가
+  
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const queryClient = useQueryClient();
-  const { data, isLoading, error, refetch } = usePosts(currentPage, 10, sortBy);
+  
+  // ✅ 카테고리 목록 조회
+  const { data: categories } = useQuery({
+    queryKey: ['categories'],
+    queryFn: () => categoryService.getCategories(),
+  });
+
+  // ✅ categoryId를 usePosts에 전달 (서버에서 필터링)
+  const { data, isLoading, error, refetch } = usePosts(currentPage, 10, sortBy, selectedCategoryId);
 
   const posts = data?.posts || [];
   const totalPages = data?.totalPages || 0;
 
-  const filteredPosts = posts.filter(post =>
-    post.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    post.content.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // ✅ 검색어만 클라이언트에서 필터링
+  const filteredPosts = posts.filter(post => {
+    const matchesSearch = post.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      post.content.toLowerCase().includes(searchTerm.toLowerCase());
+    return matchesSearch;
+  });
 
   const handlePostClick = (postId: number) => {
     navigate(`/posts/${postId}`);
@@ -43,6 +56,16 @@ const PostListPage = () => {
 
   const handleSortChange = (value: string) => {
     setSortBy(value);
+    setCurrentPage(0);
+  };
+
+  // ✅ 카테고리 필터 변경
+  const handleCategoryChange = (value: string) => {
+    if (value === "all") {
+      setSelectedCategoryId(undefined);
+    } else {
+      setSelectedCategoryId(parseInt(value));
+    }
     setCurrentPage(0);
   };
 
@@ -89,6 +112,14 @@ const PostListPage = () => {
                   <span className="text-sm text-gray-600">
                     환영합니다, {user.username}님
                   </span>
+                  {/* ✅ 카테고리 관리 버튼 */}
+                  <Button 
+                    variant="outline"
+                    onClick={() => navigate("/categories/manage")}
+                  >
+                    <Settings className="w-4 h-4 mr-2" />
+                    카테고리 관리
+                  </Button>
                   <Button 
                     variant="outline" 
                     onClick={logout}
@@ -120,7 +151,7 @@ const PostListPage = () => {
 
       {/* 메인 컨텐츠 */}
       <main className="max-w-6xl mx-auto px-4 py-8">
-        {/* 검색 바 및 정렬 */}
+        {/* 검색 바 및 필터 */}
         <div className="mb-8 flex items-center gap-4">
           <div className="relative flex-1 max-w-md">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
@@ -132,6 +163,24 @@ const PostListPage = () => {
               className="pl-10"
             />
           </div>
+          
+          {/* ✅ 카테고리 필터 */}
+          <Select value={selectedCategoryId?.toString() || "all"} onValueChange={handleCategoryChange}>
+            <SelectTrigger className="w-[200px]">
+              <SelectValue placeholder="카테고리 선택" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">전체 카테고리</SelectItem>
+              {categories?.map((category) => (
+                <SelectItem key={category.id} value={category.id.toString()}>
+                  <div className="flex items-center gap-2">
+                    <span>{category.icon}</span>
+                    <span>{category.name}</span>
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           
           {/* 정렬 선택 */}
           <Select value={sortBy} onValueChange={handleSortChange}>
@@ -161,7 +210,10 @@ const PostListPage = () => {
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-semibold text-gray-900">
-              전체 게시글 ({data?.total || 0})
+              {selectedCategoryId 
+                ? `${categories?.find(c => c.id === selectedCategoryId)?.name || '카테고리'} 게시글 (${data?.total || 0})`
+                : `전체 게시글 (${data?.total || 0})`
+              }
             </h2>
           </div>
 
@@ -194,36 +246,67 @@ const PostListPage = () => {
                     onClick={() => handlePostClick(post.id)}
                   >
                     <CardHeader className="pb-3">
-                      <div className="flex items-start justify-between">
-                        <div className="flex items-center gap-2 flex-1">
-                          {/* ✅ 비밀글 아이콘 */}
-                          {post.isSecret && (
-                            <Lock className="w-4 h-4 text-orange-600 flex-shrink-0" />
-                          )}
-                          <CardTitle className="text-lg hover:text-blue-600 transition-colors">
-                            {post.title}
-                          </CardTitle>
-                          {post.isSecret && (
-                            <Badge variant="outline" className="ml-2 bg-orange-100 text-orange-700 border-orange-300">
-                              비밀글
-                            </Badge>
-                          )}
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 flex-wrap mb-2">
+                            {/* 비밀글 아이콘 */}
+                            {post.isSecret && (
+                              <Lock className="w-4 h-4 text-orange-600 flex-shrink-0" />
+                            )}
+                            <CardTitle className="text-lg hover:text-blue-600 transition-colors">
+                              {post.title}
+                            </CardTitle>
+                            {/* 카테고리 Badge */}
+                            {post.category && (
+                              <Badge 
+                                variant="outline"
+                                style={{ 
+                                  backgroundColor: `${post.category.color}20`,
+                                  borderColor: post.category.color,
+                                  color: post.category.color
+                                }}
+                              >
+                                <span className="mr-1">{post.category.icon}</span>
+                                {post.category.name}
+                              </Badge>
+                            )}
+                            {post.isSecret && (
+                              <Badge variant="outline" className="bg-orange-100 text-orange-700 border-orange-300">
+                                비밀글
+                              </Badge>
+                            )}
+                          </div>
+                          <CardDescription 
+                            className="line-clamp-2"
+                            dangerouslySetInnerHTML={{ 
+                              __html: post.content.length > 100 
+                              ? `${post.content.substring(0, 100)}...` 
+                              : post.content 
+                            }}
+                          />
                         </div>
-                        <div className="flex items-center space-x-2 ml-2">
+                        
+                        {/* ✅ 썸네일 이미지 */}
+                        {post.attachments && post.attachments.length > 0 && 
+                         post.attachments.some(att => att.contentType.startsWith('image/')) && (
+                          <div className="flex-shrink-0">
+                            <img 
+                              src={`http://localhost:8080/api/posts/attachments/${
+                                post.attachments.find(att => att.contentType.startsWith('image/'))?.storedFileName
+                              }`}
+                              alt="썸네일"
+                              className="w-24 h-24 object-cover rounded-lg"
+                            />
+                          </div>
+                        )}
+                        
+                        <div className="flex items-center space-x-2 flex-shrink-0">
                           <Badge variant="outline" className="flex items-center space-x-1">
                             <Eye className="w-3 h-3" />
                             <span>{post.views}</span>
                           </Badge>
                         </div>
                       </div>
-                      <CardDescription 
-                        className="line-clamp-2"
-                        dangerouslySetInnerHTML={{ 
-                          __html: post.content.length > 100 
-                          ? `${post.content.substring(0, 100)}...` 
-                          : post.content 
-                        }}
-                      />
                     </CardHeader>
                     <CardContent className="pt-0">
                       <div className="flex items-center justify-between text-sm text-gray-500">
@@ -253,7 +336,7 @@ const PostListPage = () => {
                 ))}
               </div>
 
-              {/* 페이지네이션 */}
+              {/* 페이지네이션 - 검색어가 없을 때만 표시 */}
               {!searchTerm && (
                 <div className="mt-8">
                   <Pagination
