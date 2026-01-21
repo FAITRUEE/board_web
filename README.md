@@ -1,6 +1,8 @@
 # Board Client
 
-React + TypeScript + Vite로 구축한 게시판 프론트엔드 애플리케이션입니다.
+React + TypeScript + Vite 기반으로 구축한 게시판 프론트엔드 애플리케이션입니다.
+AI API를 연동하여 글 작성 과정에서 문장 보정, 요약, 표현 개선을 지원하는 지능형 작성 도우미 기능을 구현했습니다.
+단순 UI 구현을 넘어, 실제 서비스에서 활용 가능한 AI 기능을 사용자 경험(UX) 중심으로 설계했습니다.
 
 <img 
   src="https://github.com/FAITRUEE/board_web/blob/main/Animation.gif?raw=true"
