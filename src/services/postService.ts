@@ -36,7 +36,8 @@ export const getPosts = async (
   size: number = 10, 
   sort?: string,
   categoryId?: number,
-  tagName?: string
+  tagName?: string,
+  keyword?: string  // ✅ 추가
 ): Promise<PostListResponse> => {
   let url = `/posts?page=${page}&size=${size}`;
   if (sort) {
@@ -47,6 +48,9 @@ export const getPosts = async (
   }
   if (tagName) {
     url += `&tagName=${encodeURIComponent(tagName)}`;
+  }
+  if (keyword) {  // ✅ 추가
+    url += `&keyword=${encodeURIComponent(keyword)}`;
   }
   return fetchAPI<PostListResponse>(url);
 };

@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PlusCircle, Search, User, Calendar, Eye, LogOut, Heart, MessageSquare, RefreshCw, Lock, Settings, X, Pin, TrendingUp } from "lucide-react";
-import { useNavigate, useSearchParams } from "react-router-dom";  // ✅ useSearchParams 추가
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePosts } from "@/hooks/usePosts";
 import { Pagination } from "@/components/board/Pagination";
@@ -16,11 +16,12 @@ import { TagCloud } from "@/components/board/TagCloud";
 import { AdSection } from "@/components/board/AdSection";
 
 const PostListPage = () => {
-  const [searchParams, setSearchParams] = useSearchParams();  // ✅ 추가
+  const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   
-  const [searchTerm, setSearchTerm] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");  // 입력 상태
+  const [keyword, setKeyword] = useState("");  // ✅ 실제 검색 키워드 (백엔드 전달)
   const [currentPage, setCurrentPage] = useState(0);
   const [sortBy, setSortBy] = useState("createdAt,desc");
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | undefined>();
@@ -40,13 +41,14 @@ const PostListPage = () => {
     queryFn: () => categoryService.getCategories(),
   });
 
-  // ✅ 게시글 목록 조회 (태그 필터 포함)
+  // ✅ 게시글 목록 조회 (검색어, 태그 필터 포함)
   const { data, isLoading, error, refetch } = usePosts(
     currentPage, 
     10, 
     sortBy, 
     selectedCategoryId,
-    selectedTag  // ✅ 태그 전달
+    selectedTag,
+    keyword  // ✅ 검색어 전달
   );
 
   // 공지사항 및 인기 게시글용 전체 조회
@@ -86,16 +88,8 @@ const PostListPage = () => {
     .sort((a: any, b: any) => (b.views + b.likeCount * 10) - (a.views + a.likeCount * 10))
     .slice(0, 5);
 
-  // ✅ 검색어만 클라이언트 필터링 (태그는 서버에서 필터링됨)
-  const filteredPosts = posts
-    .filter(post => !post.tags?.some(tag => tag.name === '공지'))
-    .filter(post => {
-      const matchesSearch = searchTerm === "" || 
-        post.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        post.content.toLowerCase().includes(searchTerm.toLowerCase());
-      
-      return matchesSearch;
-    });
+  // ✅ 공지 제외한 게시글만 표시 (검색은 백엔드에서 처리됨)
+  const filteredPosts = posts.filter(post => !post.tags?.some(tag => tag.name === '공지'));
 
   const handlePostClick = (postId: number) => {
     navigate(`/posts/${postId}`);
@@ -124,17 +118,30 @@ const PostListPage = () => {
     setCurrentPage(0);
   };
 
-  // ✅ 태그 클릭 핸들러 수정
+  // ✅ 검색 실행
+  const handleSearch = () => {
+    setKeyword(searchTerm.trim());
+    setCurrentPage(0);
+  };
+
+  // ✅ 검색 초기화
+  const clearSearch = () => {
+    setSearchTerm("");
+    setKeyword("");
+    setCurrentPage(0);
+  };
+
+  // ✅ 태그 클릭 핸들러
   const handleTagClick = (tagName: string) => {
     setSelectedTag(tagName);
-    setSearchParams({ tag: tagName });  // URL에 태그 추가
+    setSearchParams({ tag: tagName });
     setCurrentPage(0);
   };
 
   // ✅ 태그 필터 해제
   const clearTagFilter = () => {
     setSelectedTag(undefined);
-    setSearchParams({});  // URL에서 태그 제거
+    setSearchParams({});
   };
 
   if (isLoading) {
@@ -266,15 +273,27 @@ const PostListPage = () => {
             {/* 검색 바 및 필터 */}
             <div className="flex flex-col gap-4">
               <div className="flex items-center gap-4">
-                <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                  <Input
-                    type="text"
-                    placeholder="게시글 검색..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10"
-                  />
+                {/* ✅ 검색바 */}
+                <div className="relative flex-1 flex gap-2">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                    <Input
+                      type="text"
+                      placeholder="제목 또는 내용 검색..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+                      className="pl-10"
+                    />
+                  </div>
+                  <Button onClick={handleSearch}>
+                    검색
+                  </Button>
+                  {keyword && (
+                    <Button variant="outline" onClick={clearSearch}>
+                      초기화
+                    </Button>
+                  )}
                 </div>
                 
                 <Select value={selectedCategoryId?.toString() || "all"} onValueChange={handleCategoryChange}>
@@ -316,22 +335,39 @@ const PostListPage = () => {
                 </Button>
               </div>
 
-              {/* 선택된 태그 표시 */}
-              {selectedTag && (
-                <div className="flex items-center gap-2">
+              {/* ✅ 검색어 및 태그 필터 표시 */}
+              {(keyword || selectedTag) && (
+                <div className="flex items-center gap-2 flex-wrap">
                   <span className="text-sm text-gray-500">필터:</span>
-                  <Badge 
-                    variant="secondary"
-                    className="flex items-center gap-2 px-3 py-1.5"
-                  >
-                    <span>#{selectedTag}</span>
-                    <button
-                      onClick={clearTagFilter}
-                      className="hover:bg-gray-300 rounded-full p-0.5"
+                  {keyword && (
+                    <Badge 
+                      variant="secondary"
+                      className="flex items-center gap-2 px-3 py-1.5"
                     >
-                      <X className="w-3 h-3" />
-                    </button>
-                  </Badge>
+                      <Search className="w-3 h-3" />
+                      <span>"{keyword}"</span>
+                      <button
+                        onClick={clearSearch}
+                        className="hover:bg-gray-300 rounded-full p-0.5"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </Badge>
+                  )}
+                  {selectedTag && (
+                    <Badge 
+                      variant="secondary"
+                      className="flex items-center gap-2 px-3 py-1.5"
+                    >
+                      <span>#{selectedTag}</span>
+                      <button
+                        onClick={clearTagFilter}
+                        className="hover:bg-gray-300 rounded-full p-0.5"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </Badge>
+                  )}
                 </div>
               )}
             </div>
@@ -340,7 +376,9 @@ const PostListPage = () => {
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-semibold text-gray-900">
-                  {selectedTag 
+                  {keyword
+                    ? `"${keyword}" 검색 결과 (${data?.total || 0})`
+                    : selectedTag 
                     ? `#${selectedTag} 게시글 (${data?.total || 0})`
                     : selectedCategoryId 
                     ? `${categories?.find(c => c.id === selectedCategoryId)?.name || '카테고리'} 게시글 (${data?.total || 0})`
@@ -354,8 +392,10 @@ const PostListPage = () => {
                   <CardContent className="py-12 text-center">
                     {posts.length === 0 ? (
                       <div>
-                        <p className="text-gray-500 mb-4">아직 게시글이 없습니다.</p>
-                        {user && (
+                        <p className="text-gray-500 mb-4">
+                          {keyword ? '검색 결과가 없습니다.' : '아직 게시글이 없습니다.'}
+                        </p>
+                        {user && !keyword && (
                           <Button onClick={() => navigate("/posts/create")}>
                             첫 번째 게시글 작성하기
                           </Button>
@@ -487,16 +527,14 @@ const PostListPage = () => {
                     ))}
                   </div>
 
-                  {/* ✅ 페이지네이션 - 검색어만 있을 때 숨김 */}
-                  {!searchTerm && (
-                    <div className="mt-8">
-                      <Pagination
-                        currentPage={currentPage}
-                        totalPages={totalPages}
-                        onPageChange={setCurrentPage}
-                      />
-                    </div>
-                  )}
+                  {/* ✅ 페이지네이션 */}
+                  <div className="mt-8">
+                    <Pagination
+                      currentPage={currentPage}
+                      totalPages={totalPages}
+                      onPageChange={setCurrentPage}
+                    />
+                  </div>
                 </>
               )}
             </div>

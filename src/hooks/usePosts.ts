@@ -2,20 +2,19 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import * as postService from '@/services/postService';
 import { CreatePostRequest, UpdatePostRequest } from '@/types/post';
 
-// 게시글 목록 조회 훅 (카테고리 필터 추가)
 export const usePosts = (
   page: number = 0, 
   size: number = 10, 
   sort?: string,
   categoryId?: number,
-  tagName?: string  // ✅ 추가
+  tagName?: string,
+  keyword?: string  // ✅ 추가
 ) => {
   return useQuery({
-    queryKey: ['posts', page, size, sort, categoryId, tagName],  // ✅ tagName 추가
-    queryFn: () => postService.getPosts(page, size, sort, categoryId, tagName),  // ✅ tagName 전달
+    queryKey: ['posts', page, size, sort, categoryId, tagName, keyword],  // ✅ keyword 추가
+    queryFn: () => postService.getPosts(page, size, sort, categoryId, tagName, keyword),  // ✅ keyword 전달
   });
 };
-
 // 게시글 상세 조회 훅
 export const usePost = (id: number) => {
   return useQuery({
