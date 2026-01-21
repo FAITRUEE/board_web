@@ -12,6 +12,7 @@ import { useCreatePost } from "@/hooks/usePosts";
 import { useToast } from "@/hooks/use-toast";
 import { DrawingCanvas } from "@/components/board/DrawingCanvas";
 import { RichTextEditor } from "@/components/board/RichTextEditor";
+import { AIWritingAssistant } from "@/components/board/AIWritingAssistant";  // ✅ 추가
 
 const PostCreatePage = () => {
   const navigate = useNavigate();
@@ -22,8 +23,14 @@ const PostCreatePage = () => {
   const [content, setContent] = useState("");
   const [files, setFiles] = useState<File[]>([]);
   const [drawings, setDrawings] = useState<File[]>([]);
-  const [isSecret, setIsSecret] = useState(false);  // ✅ 추가
-  const [secretPassword, setSecretPassword] = useState("");  // ✅ 추가
+  const [isSecret, setIsSecret] = useState(false);
+  const [secretPassword, setSecretPassword] = useState("");
+
+  // ✅ AI 생성 결과 처리
+  const handleAIGenerate = (generatedTitle: string, generatedContent: string) => {
+    setTitle(generatedTitle);
+    setContent(generatedContent);
+  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -73,7 +80,6 @@ const PostCreatePage = () => {
       return;
     }
 
-    // ✅ 비밀글 체크
     if (isSecret && !secretPassword.trim()) {
       toast({
         title: "비밀번호 필요",
@@ -90,8 +96,8 @@ const PostCreatePage = () => {
         title: title.trim(),
         content: content.trim(),
         files: allFiles.length > 0 ? allFiles : undefined,
-        isSecret,  // ✅ 추가
-        secretPassword: isSecret ? secretPassword : undefined,  // ✅ 추가
+        isSecret,
+        secretPassword: isSecret ? secretPassword : undefined,
       },
       {
         onSuccess: () => {
@@ -117,16 +123,20 @@ const PostCreatePage = () => {
       {/* 헤더 */}
       <header className="bg-white shadow-sm border-b">
         <div className="max-w-4xl mx-auto px-4 py-4">
-          <div className="flex items-center space-x-4">
-            <Button 
-              variant="ghost" 
-              onClick={() => navigate("/")}
-              className="flex items-center space-x-2"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              <span>목록으로</span>
-            </Button>
-            <h1 className="text-xl font-semibold">게시글 작성</h1>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <Button 
+                variant="ghost" 
+                onClick={() => navigate("/")}
+                className="flex items-center space-x-2"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                <span>목록으로</span>
+              </Button>
+              <h1 className="text-xl font-semibold">게시글 작성</h1>
+            </div>
+            {/* ✅ AI 작성 도우미 버튼 */}
+            <AIWritingAssistant onGenerate={handleAIGenerate} />
           </div>
         </div>
       </header>
@@ -165,7 +175,7 @@ const PostCreatePage = () => {
                 />
               </div>
 
-              {/* ✅ 비밀글 설정 */}
+              {/* 비밀글 설정 */}
               <div className="space-y-4 p-4 border rounded-lg bg-gray-50">
                 <div className="flex items-center space-x-2">
                   <Checkbox
