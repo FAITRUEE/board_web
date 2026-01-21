@@ -1,4 +1,5 @@
 import { Category } from './category';
+import { Tag } from './tag';  // ✅ 추가
 
 export interface Post {
   id: number;
@@ -14,7 +15,8 @@ export interface Post {
   updatedAt: string;
   attachments?: PostAttachment[];
   isSecret: boolean;
-  category?: Category;  // ✅ 카테고리 추가
+  category?: Category;
+  tags?: Tag[];  // ✅ 추가
 }
 
 export interface PostAttachment {
@@ -32,13 +34,15 @@ export interface CreatePostRequest {
   files?: File[];
   isSecret?: boolean;
   secretPassword?: string;
-  categoryId?: number;  // ✅ 카테고리 ID 추가
+  categoryId?: number;
+  tags?: string[];  // ✅ 추가
 }
 
 export interface UpdatePostRequest {
   title: string;
   content: string;
-  categoryId?: number;  // ✅ 카테고리 ID 추가
+  categoryId?: number;
+  tags?: string[];  // ✅ 추가
 }
 
 export interface PostListResponse {

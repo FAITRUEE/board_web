@@ -9,7 +9,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePost, useUpdatePost } from "@/hooks/usePosts";
 import { RichTextEditor } from "@/components/board/RichTextEditor";
-import { CategorySelect } from "@/components/board/CategorySelect";  // ✅ 추가
+import { CategorySelect } from "@/components/board/CategorySelect";
+import { TagInput } from "@/components/board/TagInput";  // ✅ 추가
 
 const PostEditPage = () => {
   const navigate = useNavigate();
@@ -23,15 +24,19 @@ const PostEditPage = () => {
   
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
-  const [categoryId, setCategoryId] = useState<number | undefined>();  // ✅ 추가
+  const [categoryId, setCategoryId] = useState<number | undefined>();
+  const [tags, setTags] = useState<string[]>([]);  // ✅ 추가
 
   useEffect(() => {
     if (post) {
       setTitle(post.title);
       setContent(post.content);
-      setCategoryId(post.category?.id);  // ✅ 카테고리 초기값 설정
+      setCategoryId(post.category?.id);
+      // ✅ 태그 초기값 설정
+      if (post.tags) {
+        setTags(post.tags.map(tag => tag.name));
+      }
       
-      // 작성자가 아닌 경우 접근 차단
       if (user && user.id !== post.authorId) {
         toast({
           title: "접근 권한 없음",
@@ -61,7 +66,8 @@ const PostEditPage = () => {
         request: {
           title: title.trim(),
           content: content.trim(),
-          categoryId,  // ✅ 카테고리 ID 추가
+          categoryId,
+          tags,  // ✅ 태그 추가
         },
       },
       {
@@ -113,7 +119,6 @@ const PostEditPage = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* 헤더 */}
       <header className="bg-white shadow-sm border-b">
         <div className="max-w-4xl mx-auto px-4 py-4">
           <div className="flex items-center space-x-4">
@@ -130,21 +135,25 @@ const PostEditPage = () => {
         </div>
       </header>
 
-      {/* 메인 컨텐츠 */}
       <main className="max-w-4xl mx-auto px-4 py-8">
         <Card>
           <CardHeader>
             <CardTitle>게시글 수정</CardTitle>
             <CardDescription>
-              게시글의 제목과 내용을 수정할 수 있습니다.
+              게시글의 제목, 내용, 카테고리, 태그를 수정할 수 있습니다.
             </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
-              {/* ✅ 카테고리 선택 추가 */}
               <CategorySelect 
                 value={categoryId}
                 onChange={setCategoryId}
+              />
+
+              {/* ✅ 태그 입력 추가 */}
+              <TagInput
+                value={tags}
+                onChange={setTags}
               />
 
               <div className="space-y-2">

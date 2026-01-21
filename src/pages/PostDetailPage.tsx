@@ -241,35 +241,53 @@ const PostDetailPage = () => {
       <main className="max-w-4xl mx-auto px-4 py-8">
         <Card className={isSecretLocked ? "border-orange-200" : ""}>
           <CardHeader className="pb-4">
-            <div className="flex items-start justify-between">
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-2">
-                  {/* ✅ 카테고리 Badge */}
-                  {displayPost.category && (
-                    <Badge 
-                      variant="outline"
-                      style={{ 
-                        backgroundColor: `${displayPost.category.color}20`,
-                        borderColor: displayPost.category.color,
-                        color: displayPost.category.color
-                      }}
-                    >
-                      <span className="mr-1">{displayPost.category.icon}</span>
-                      {displayPost.category.name}
-                    </Badge>
-                  )}
-                  {displayPost.isSecret && (
-                    <Badge variant="outline" className="bg-orange-100 text-orange-700 border-orange-300">
-                      <Lock className="w-3 h-3 mr-1" />
-                      비밀글
-                    </Badge>
-                  )}
-                </div>
-                <CardTitle className="text-2xl font-bold leading-tight">
-                  {displayPost.title}
-                </CardTitle>
-              </div>
-            </div>
+  <div className="flex items-start justify-between">
+    <div className="flex-1">
+      <div className="flex items-center gap-2 mb-2 flex-wrap">
+        {/* 카테고리 Badge */}
+        {displayPost.category && (
+          <Badge 
+            variant="outline"
+            style={{ 
+              backgroundColor: `${displayPost.category.color}20`,
+              borderColor: displayPost.category.color,
+              color: displayPost.category.color
+            }}
+          >
+            <span className="mr-1">{displayPost.category.icon}</span>
+            {displayPost.category.name}
+          </Badge>
+        )}
+        
+        {/* ✅ 태그 표시 */}
+        {displayPost.tags && displayPost.tags.length > 0 && (
+          <>
+            {displayPost.tags.map((tag) => (
+              <Badge
+                key={tag.id}
+                variant="outline"
+                className="cursor-pointer hover:bg-gray-100"
+                onClick={() => navigate(`/?tag=${tag.name}`)}
+              >
+                #{tag.name}
+              </Badge>
+            ))}
+          </>
+        )}
+        
+        {displayPost.isSecret && (
+          <Badge variant="outline" className="bg-orange-100 text-orange-700 border-orange-300">
+            <Lock className="w-3 h-3 mr-1" />
+            비밀글
+          </Badge>
+        )}
+      </div>
+      
+      <CardTitle className="text-2xl font-bold leading-tight">
+        {displayPost.title}
+      </CardTitle>
+    </div>
+  </div>
             
             <div className="flex items-center justify-between mt-4">
               <div className="flex items-center space-x-6 text-sm text-gray-500">

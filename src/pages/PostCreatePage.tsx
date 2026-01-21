@@ -14,6 +14,7 @@ import { DrawingCanvas } from "@/components/board/DrawingCanvas";
 import { RichTextEditor } from "@/components/board/RichTextEditor";
 import { AIWritingAssistant } from "@/components/board/AIWritingAssistant";
 import { CategorySelect } from "@/components/board/CategorySelect"; 
+import { TagInput } from "@/components/board/TagInput";
 
 const PostCreatePage = () => {
   const navigate = useNavigate();
@@ -26,7 +27,8 @@ const PostCreatePage = () => {
   const [drawings, setDrawings] = useState<File[]>([]);
   const [isSecret, setIsSecret] = useState(false);
   const [secretPassword, setSecretPassword] = useState("");
-  const [categoryId, setCategoryId] = useState<number | undefined>();  // ✅ 추가
+  const [categoryId, setCategoryId] = useState<number | undefined>();
+  const [tags, setTags] = useState<string[]>([]); 
 
   const handleAIGenerate = (generatedTitle: string, generatedContent: string) => {
     setTitle(generatedTitle);
@@ -99,7 +101,8 @@ const PostCreatePage = () => {
         files: allFiles.length > 0 ? allFiles : undefined,
         isSecret,
         secretPassword: isSecret ? secretPassword : undefined,
-        categoryId,  // ✅ 카테고리 ID 추가
+        categoryId,
+        tags,
       },
       {
         onSuccess: () => {
@@ -157,6 +160,11 @@ const PostCreatePage = () => {
               <CategorySelect 
                 value={categoryId}
                 onChange={setCategoryId}
+              />
+
+              <TagInput
+                value={tags}
+                onChange={setTags}
               />
 
               <div className="space-y-2">
