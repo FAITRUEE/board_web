@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { PlusCircle, Search, User, Calendar, Eye, LogOut, Heart, MessageSquare, RefreshCw, Lock, Settings, X } from "lucide-react";
+import { PlusCircle, Search, User, Calendar, Eye, LogOut, Heart, MessageSquare, RefreshCw, Lock, Settings, X, Pin, TrendingUp } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePosts } from "@/hooks/usePosts";
@@ -31,25 +31,59 @@ const PostListPage = () => {
     queryFn: () => categoryService.getCategories(),
   });
 
-  // 게시글 목록 조회 (카테고리 필터)
+  // 게시글 목록 조회
   const { data, isLoading, error, refetch } = usePosts(currentPage, 10, sortBy, selectedCategoryId);
+
+  // 공지사항 및 인기 게시글용 전체 조회 (캐시 없이 항상 최신 데이터)
+  const { data: allPostsData, refetch: refetchAll } = useQuery({
+    queryKey: ['allPosts', selectedCategoryId],
+    queryFn: async () => {
+      const response = await fetch(
+        `http://localhost:8080/api/posts?page=0&size=100&sort=views,desc${
+          selectedCategoryId ? `&categoryId=${selectedCategoryId}` : ''
+        }`,
+        {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          },
+        }
+      );
+      if (!response.ok) throw new Error('Failed to fetch all posts');
+      const data = await response.json();
+      return data;
+    },
+    staleTime: 0, // 항상 최신 데이터로
+    gcTime: 0, // 캐시 사용 안 함 (구버전에서는 cacheTime)
+  });
 
   const posts = data?.posts || [];
   const totalPages = data?.totalPages || 0;
+  const allPosts = allPostsData?.content || allPostsData?.posts || [];
 
-  // 검색어와 태그 필터링 (클라이언트)
-  const filteredPosts = posts.filter(post => {
-    // 검색어 필터
-    const matchesSearch = searchTerm === "" || 
-      post.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      post.content.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    // 태그 필터
-    const matchesTag = !selectedTag || 
-      (post.tags && post.tags.some(tag => tag.name === selectedTag));
-    
-    return matchesSearch && matchesTag;
-  });
+  // 공지 태그가 있는 게시글만 필터링
+  const noticePosts = allPosts
+    .filter((post: any) => post.tags && post.tags.some((tag: any) => tag.name === '공지'))
+    .slice(0, 5);
+  
+  // 인기 게시글 (조회수 + 좋아요 기준, 공지 제외)
+  const trendingPosts = allPosts
+    .filter((post: any) => !post.tags?.some((tag: any) => tag.name === '공지'))
+    .sort((a: any, b: any) => (b.views + b.likeCount * 10) - (a.views + a.likeCount * 10))
+    .slice(0, 5);
+
+  // 검색어와 태그 필터링 (공지 제외)
+  const filteredPosts = posts
+    .filter(post => !post.tags?.some(tag => tag.name === '공지'))
+    .filter(post => {
+      const matchesSearch = searchTerm === "" || 
+        post.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        post.content.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      const matchesTag = !selectedTag || 
+        (post.tags && post.tags.some(tag => tag.name === selectedTag));
+      
+      return matchesSearch && matchesTag;
+    });
 
   const handlePostClick = (postId: number) => {
     navigate(`/posts/${postId}`);
@@ -61,6 +95,7 @@ const PostListPage = () => {
 
   const handleRefresh = () => {
     refetch();
+    refetchAll();
   };
 
   const handleSortChange = (value: string) => {
@@ -77,13 +112,11 @@ const PostListPage = () => {
     setCurrentPage(0);
   };
 
-  // 태그 클릭 핸들러
   const handleTagClick = (tagName: string) => {
     setSelectedTag(tagName);
     setCurrentPage(0);
   };
 
-  // 태그 필터 해제
   const clearTagFilter = () => {
     setSelectedTag(undefined);
   };
@@ -172,6 +205,48 @@ const PostListPage = () => {
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           {/* 왼쪽: 게시글 목록 (3/4) */}
           <div className="lg:col-span-3 space-y-6">
+            {/* 공지사항 영역 */}
+            {noticePosts.length > 0 && (
+              <Card className="border-blue-200 bg-blue-50/30">
+                <CardHeader className="pb-3">
+                  <div className="flex items-center gap-2">
+                    <Pin className="w-5 h-5 text-blue-600" />
+                    <CardTitle className="text-lg">공지사항</CardTitle>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    {noticePosts.map((post) => (
+                      <div
+                        key={post.id}
+                        onClick={() => handlePostClick(post.id)}
+                        className="flex items-center justify-between p-3 hover:bg-blue-100/50 rounded-lg cursor-pointer transition-colors"
+                      >
+                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                          <Badge variant="outline" className="bg-blue-100 text-blue-700 border-blue-300 flex-shrink-0">
+                            공지
+                          </Badge>
+                          <span className="font-medium truncate">{post.title}</span>
+                          {post.category && (
+                            <Badge variant="outline" className="text-xs flex-shrink-0">
+                              {post.category.icon} {post.category.name}
+                            </Badge>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-3 text-sm text-gray-500 flex-shrink-0">
+                          <span>{formatDate(post.createdAt)}</span>
+                          <div className="flex items-center gap-1">
+                            <Eye className="w-4 h-4" />
+                            <span>{post.views}</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
             {/* 검색 바 및 필터 */}
             <div className="flex flex-col gap-4">
               <div className="flex items-center gap-4">
@@ -415,9 +490,47 @@ const PostListPage = () => {
             </div>
           </div>
 
-          {/* 오른쪽: 태그 클라우드 및 광고 (1/4) */}
+          {/* 오른쪽: 인기 게시글, 태그 클라우드, 광고 (1/4) */}
           <div className="lg:col-span-1">
             <div className="sticky top-4 space-y-6">
+              {/* 인기 게시글 */}
+              <Card>
+                <CardHeader className="pb-3">
+                  <div className="flex items-center gap-2">
+                    <TrendingUp className="w-5 h-5 text-red-500" />
+                    <CardTitle className="text-lg">많이 본 게시글</CardTitle>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {trendingPosts.map((post, index) => (
+                      <div
+                        key={post.id}
+                        onClick={() => handlePostClick(post.id)}
+                        className="flex gap-3 hover:bg-gray-50 p-2 rounded-lg cursor-pointer transition-colors"
+                      >
+                        <div className="flex-shrink-0 w-8 h-8 bg-gradient-to-br from-red-500 to-orange-500 rounded-lg flex items-center justify-center text-white font-bold">
+                          {index + 1}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h4 className="text-sm font-medium line-clamp-2 mb-1">{post.title}</h4>
+                          <div className="flex items-center gap-2 text-xs text-gray-500">
+                            <div className="flex items-center gap-1">
+                              <Eye className="w-3 h-3" />
+                              <span>{post.views}</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <Heart className="w-3 h-3" />
+                              <span>{post.likeCount}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+
               <TagCloud onTagClick={handleTagClick} />
               <AdSection />
             </div>
