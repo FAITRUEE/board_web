@@ -3,7 +3,7 @@
 React + TypeScript + Vite로 구축한 게시판 프론트엔드 애플리케이션입니다.
 
 <img 
-  src="https://github.com/FAITRUEE/board_web/blob/main/%EA%B2%8C%EC%8B%9C%ED%8C%90%20%EC%9B%B9%EC%82%AC%EC%9D%B4%ED%8A%B8.png?raw=true"
+  src="https://github.com/FAITRUEE/board_web/blob/main/Animation.gif?raw=true"
   width="600"
 />
 
