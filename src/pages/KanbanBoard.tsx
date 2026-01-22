@@ -18,16 +18,28 @@ import {
   useUpdateCard,
   useDeleteCard,
   KanbanCard as CardType,
+  UpdateCardData, // ✅ 타입 import 추가
 } from '../hooks/useKanban';
 import { KanbanColumn } from '../components/kanban/KanbanColumn';
 import { KanbanCard } from '../components/kanban/KanbanCard';
 import { CardModal } from '../components/kanban/CardModal';
+import { CardDetailModal } from '../components/kanban/CardDetailModal';
 
 const COLUMNS = [
   { id: 'TODO', title: '할 일 (To Do)' },
   { id: 'IN_PROGRESS', title: '진행 중 (In Progress)' },
   { id: 'DONE', title: '완료 (Done)' },
 ];
+
+// ✅ 카드 폼 데이터 타입 정의
+interface CardFormData {
+  title: string;
+  description: string;
+  status?: string;
+  assignedTo?: number;
+  dueDate?: string;
+  priority?: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT'; // ✅ 명시적 타입
+}
 
 export const KanbanBoardPage: React.FC = () => {
   const { boardId } = useParams<{ boardId: string }>();
@@ -37,15 +49,14 @@ export const KanbanBoardPage: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalStatus, setModalStatus] = useState<string>('');
   const [editingCard, setEditingCard] = useState<CardType | null>(null);
+  const [viewingCard, setViewingCard] = useState<CardType | null>(null);
 
-  // React Query hooks
   const { data: board, isLoading } = useKanbanBoard(Number(boardId));
   const moveCardMutation = useMoveCard();
   const createCardMutation = useCreateCard();
   const updateCardMutation = useUpdateCard();
   const deleteCardMutation = useDeleteCard();
 
-  // 드래그 센서 설정
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -54,20 +65,17 @@ export const KanbanBoardPage: React.FC = () => {
     })
   );
 
-  // 상태별 카드 분류
   const cardsByStatus = {
     TODO: board?.cards?.filter((c) => c.status === 'TODO').sort((a, b) => a.position - b.position) || [],
     IN_PROGRESS: board?.cards?.filter((c) => c.status === 'IN_PROGRESS').sort((a, b) => a.position - b.position) || [],
     DONE: board?.cards?.filter((c) => c.status === 'DONE').sort((a, b) => a.position - b.position) || [],
   };
 
-  // 드래그 시작
   const handleDragStart = (event: DragStartEvent) => {
     const card = board?.cards?.find((c) => c.id === event.active.id);
     if (card) setActiveCard(card);
   };
 
-  // 드래그 종료
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     
@@ -78,7 +86,6 @@ export const KanbanBoardPage: React.FC = () => {
     const cardId = active.id as number;
     const overId = over.id;
 
-    // 컬럼에 드롭한 경우
     if (typeof overId === 'string' && ['TODO', 'IN_PROGRESS', 'DONE'].includes(overId)) {
       const newStatus = overId;
       const cardsInColumn = cardsByStatus[newStatus as keyof typeof cardsByStatus];
@@ -90,7 +97,6 @@ export const KanbanBoardPage: React.FC = () => {
         position: cardsInColumn.length,
       });
     }
-    // 다른 카드 위에 드롭한 경우
     else if (typeof overId === 'number') {
       const targetCard = board?.cards?.find((c) => c.id === overId);
       if (targetCard) {
@@ -104,46 +110,54 @@ export const KanbanBoardPage: React.FC = () => {
     }
   };
 
-  // 카드 추가
   const handleAddCard = (status: string) => {
     setModalStatus(status);
     setEditingCard(null);
     setIsModalOpen(true);
   };
 
-  // 카드 수정
   const handleEditCard = (card: CardType) => {
     setEditingCard(card);
     setIsModalOpen(true);
   };
 
-  // 카드 삭제
+  const handleViewCard = (card: CardType) => {
+    setViewingCard(card);
+  };
+
   const handleDeleteCard = (cardId: number) => {
     if (window.confirm('이 카드를 삭제하시겠습니까?')) {
       deleteCardMutation.mutate({ boardId: Number(boardId), cardId });
     }
   };
 
-  // 모달 제출
-  const handleModalSubmit = (data: { title: string; description: string; status?: string }) => {
+  // ✅ 타입 지정
+  const handleModalSubmit = (data: CardFormData) => {
     if (editingCard) {
-      // 카드 수정
+      // ✅ UpdateCardData 타입에 맞게 변환
+      const updateData: UpdateCardData = {
+        title: data.title,
+        description: data.description,
+        assignedTo: data.assignedTo,
+        dueDate: data.dueDate,
+        priority: data.priority, // ✅ 이미 올바른 타입
+      };
+
       updateCardMutation.mutate({
         boardId: Number(boardId),
         cardId: editingCard.id,
-        data: {
-          title: data.title,
-          description: data.description,
-        },
+        data: updateData,
       });
     } else {
-      // 카드 생성
       createCardMutation.mutate({
         boardId: Number(boardId),
         data: {
           title: data.title,
           description: data.description,
           status: data.status,
+          assignedTo: data.assignedTo,
+          dueDate: data.dueDate,
+          priority: data.priority,
         },
       });
     }
@@ -206,19 +220,18 @@ export const KanbanBoardPage: React.FC = () => {
                 cards={cardsByStatus[column.id as keyof typeof cardsByStatus]}
                 onAddCard={handleAddCard}
                 onDeleteCard={handleDeleteCard}
-                onEditCard={handleEditCard}
+                onViewCard={handleViewCard}
               />
             ))}
           </div>
 
-          {/* 드래그 오버레이 */}
           <DragOverlay>
             {activeCard ? (
               <div className="rotate-3 scale-105">
                 <KanbanCard
                   card={activeCard}
                   onDelete={() => {}}
-                  onEdit={() => {}}
+                  onView={() => {}}
                 />
               </div>
             ) : null}
@@ -236,7 +249,19 @@ export const KanbanBoardPage: React.FC = () => {
         onSubmit={handleModalSubmit}
         status={modalStatus}
         editCard={editingCard}
+        teamId={board.teamId}
       />
+
+      {/* 카드 상세 모달 */}
+      {viewingCard && (
+        <CardDetailModal
+          isOpen={!!viewingCard}
+          onClose={() => setViewingCard(null)}
+          card={viewingCard}
+          teamId={board.teamId}
+          boardId={Number(boardId)}
+        />
+      )}
     </div>
   );
 };

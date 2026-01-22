@@ -12,7 +12,7 @@ interface KanbanColumnProps {
   cards: CardType[];
   onAddCard: (status: string) => void;
   onDeleteCard: (cardId: number) => void;
-  onEditCard: (card: CardType) => void;
+  onViewCard: (card: CardType) => void; // ✅ 추가
 }
 
 const COLUMN_COLORS = {
@@ -27,7 +27,7 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
   cards,
   onAddCard,
   onDeleteCard,
-  onEditCard,
+  onViewCard, 
 }) => {
   const { setNodeRef } = useDroppable({ id });
 
@@ -59,7 +59,7 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
               key={card.id}
               card={card}
               onDelete={onDeleteCard}
-              onEdit={onEditCard}
+              onView={onViewCard} // ✅ 추가
             />
           ))}
         </SortableContext>

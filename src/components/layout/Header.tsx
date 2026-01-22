@@ -21,7 +21,7 @@ export const Header = () => {
           <div className="flex items-center space-x-6">
             <div className="flex items-center space-x-3">
               <img src={logo} alt="logo" className="w-9 h-9" />
-              <h1 className="text-2xl font-bold text-gray-900">게시판</h1>
+              <h1 className="text-2xl font-bold text-gray-900">SmartBoard</h1>
               <Badge variant="secondary">CRUD Board</Badge>
             </div>
 
