@@ -1,33 +1,32 @@
+// src/pages/PostListPage.tsx
 import { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { PlusCircle, Search, User, Calendar, Eye, LogOut, Heart, MessageSquare, RefreshCw, Lock, Settings, X, Pin, TrendingUp } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Search, User, Calendar, Eye, Heart, MessageSquare, RefreshCw, Lock, Pin, TrendingUp, X } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePosts } from "@/hooks/usePosts";
 import { Pagination } from "@/components/board/Pagination";
 import { useQuery } from "@tanstack/react-query";
 import * as categoryService from "@/services/categoryService";
-import logo from "../assets/logo.png";
 import { TagCloud } from "@/components/board/TagCloud";
 import { AdSection } from "@/components/board/AdSection";
 
 const PostListPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   
-  const [searchTerm, setSearchTerm] = useState("");  // 입력 상태
-  const [keyword, setKeyword] = useState("");  // ✅ 실제 검색 키워드 (백엔드 전달)
+  const [searchTerm, setSearchTerm] = useState("");
+  const [keyword, setKeyword] = useState("");
   const [currentPage, setCurrentPage] = useState(0);
   const [sortBy, setSortBy] = useState("createdAt,desc");
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | undefined>();
   const [selectedTag, setSelectedTag] = useState<string | undefined>();
 
-  // ✅ URL 파라미터에서 태그 읽기
   useEffect(() => {
     const tagFromUrl = searchParams.get('tag');
     if (tagFromUrl) {
@@ -35,23 +34,20 @@ const PostListPage = () => {
     }
   }, [searchParams]);
   
-  // 카테고리 목록 조회
   const { data: categories } = useQuery({
     queryKey: ['categories'],
     queryFn: () => categoryService.getCategories(),
   });
 
-  // ✅ 게시글 목록 조회 (검색어, 태그 필터 포함)
   const { data, isLoading, error, refetch } = usePosts(
     currentPage, 
     10, 
     sortBy, 
     selectedCategoryId,
     selectedTag,
-    keyword  // ✅ 검색어 전달
+    keyword
   );
 
-  // 공지사항 및 인기 게시글용 전체 조회
   const { data: allPostsData, refetch: refetchAll } = useQuery({
     queryKey: ['allPosts', selectedCategoryId],
     queryFn: async () => {
@@ -77,18 +73,15 @@ const PostListPage = () => {
   const totalPages = data?.totalPages || 0;
   const allPosts = allPostsData?.content || allPostsData?.posts || [];
 
-  // 공지 태그가 있는 게시글만 필터링
   const noticePosts = allPosts
     .filter((post: any) => post.tags && post.tags.some((tag: any) => tag.name === '공지'))
     .slice(0, 5);
   
-  // 인기 게시글 (조회수 + 좋아요 기준, 공지 제외)
   const trendingPosts = allPosts
     .filter((post: any) => !post.tags?.some((tag: any) => tag.name === '공지'))
     .sort((a: any, b: any) => (b.views + b.likeCount * 10) - (a.views + a.likeCount * 10))
     .slice(0, 5);
 
-  // ✅ 공지 제외한 게시글만 표시 (검색은 백엔드에서 처리됨)
   const filteredPosts = posts.filter(post => !post.tags?.some(tag => tag.name === '공지'));
 
   const handlePostClick = (postId: number) => {
@@ -118,27 +111,23 @@ const PostListPage = () => {
     setCurrentPage(0);
   };
 
-  // ✅ 검색 실행
   const handleSearch = () => {
     setKeyword(searchTerm.trim());
     setCurrentPage(0);
   };
 
-  // ✅ 검색 초기화
   const clearSearch = () => {
     setSearchTerm("");
     setKeyword("");
     setCurrentPage(0);
   };
 
-  // ✅ 태그 클릭 핸들러
   const handleTagClick = (tagName: string) => {
     setSelectedTag(tagName);
     setSearchParams({ tag: tagName });
     setCurrentPage(0);
   };
 
-  // ✅ 태그 필터 해제
   const clearTagFilter = () => {
     setSelectedTag(undefined);
     setSearchParams({});
@@ -172,57 +161,6 @@ const PostListPage = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* 헤더 */}
-      <header className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <img src={logo} alt="logo" className="w-9 h-9" />
-              <h1 className="text-2xl font-bold text-gray-900">게시판</h1>
-              <Badge variant="secondary">CRUD Board</Badge>
-            </div>
-            <div className="flex items-center space-x-4">
-              {user ? (
-                <>
-                  <span className="text-sm text-gray-600">
-                    환영합니다, {user.username}님
-                  </span>
-                  <Button 
-                    variant="outline"
-                    onClick={() => navigate("/categories/manage")}
-                  >
-                    <Settings className="w-4 h-4 mr-2" />
-                    카테고리 관리
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    onClick={logout}
-                    className="flex items-center space-x-2"
-                  >
-                    <LogOut className="w-4 h-4" />
-                    <span>로그아웃</span>
-                  </Button>
-                  <Button 
-                    onClick={() => navigate("/posts/create")}
-                    className="flex items-center space-x-2"
-                  >
-                    <PlusCircle className="w-4 h-4" />
-                    <span>글쓰기</span>
-                  </Button>
-                </>
-              ) : (
-                <Button 
-                  variant="outline" 
-                  onClick={() => navigate("/auth")}
-                >
-                  로그인
-                </Button>
-              )}
-            </div>
-          </div>
-        </div>
-      </header>
-
       {/* 메인 컨텐츠 */}
       <main className="max-w-7xl mx-auto px-4 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
@@ -273,7 +211,6 @@ const PostListPage = () => {
             {/* 검색 바 및 필터 */}
             <div className="flex flex-col gap-4">
               <div className="flex items-center gap-4">
-                {/* ✅ 검색바 */}
                 <div className="relative flex-1 flex gap-2">
                   <div className="relative flex-1">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
@@ -335,7 +272,6 @@ const PostListPage = () => {
                 </Button>
               </div>
 
-              {/* ✅ 검색어 및 태그 필터 표시 */}
               {(keyword || selectedTag) && (
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="text-sm text-gray-500">필터:</span>
@@ -527,7 +463,6 @@ const PostListPage = () => {
                     ))}
                   </div>
 
-                  {/* ✅ 페이지네이션 */}
                   <div className="mt-8">
                     <Pagination
                       currentPage={currentPage}
@@ -542,12 +477,12 @@ const PostListPage = () => {
 
           {/* 오른쪽 사이드바 */}
           <div className="lg:col-span-1">
-            <div className="sticky top-4 space-y-6">
+            <div className="sticky top-20 space-y-6">
               <Card>
                 <CardHeader className="pb-3">
                   <div className="flex items-center gap-2">
                     <TrendingUp className="w-5 h-5 text-red-500" />
-                    <CardTitle className="text-lg">많이 본 게시글</CardTitle>
+                    <CardTitle className="text-lg">인기 게시글</CardTitle>
                   </div>
                 </CardHeader>
                 <CardContent>
