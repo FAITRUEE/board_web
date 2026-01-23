@@ -21,7 +21,7 @@ React + TypeScript + Vite 기반 통합 협업 플랫폼 프론트엔드입니�
 - **그림 그리기**: 캔버스로 직접 그림 첨부
 - **비밀글**: 비밀번호로 보호
 - **Rich Text Editor**: WYSIWYG 에디터 (Quill.js)
-- **AI 작성 도우미**: Ollama 연동 (선택사항)
+- **AI 작성 도우미**: Ollama 연동 
 - **댓글 시스템**: 실시간 댓글 작성/수정/삭제
 - **좋아요**: 사용자당 게시글당 1회
 - **페이지네이션**: 10개씩 페이징
@@ -208,7 +208,7 @@ VITE_API_BASE_URL=http://localhost:8080/api
 - **Loading Indicator**: 로딩 상태 표시
 - **Error Handling**: 친화적인 에러 메시지
 - **Toast 알림**: 성공/실패 피드백
-- **Skeleton UI**: 로딩 중 스켈레톤 (선택사항)
+- **Skeleton UI**: 로딩 중 스켈레톤 
 - **Optimistic Updates**: 즉각적인 UI 반응 ⭐
 
 ### 접근성
