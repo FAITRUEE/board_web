@@ -10,6 +10,7 @@ import { ArrowLeft, Save, Upload, X, Image as ImageIcon, Palette, Lock } from "l
 import { useNavigate } from "react-router-dom";
 import { useCreatePost } from "@/hooks/usePosts";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext"; // ✅ 추가
 import { DrawingCanvas } from "@/components/board/DrawingCanvas";
 import { RichTextEditor } from "@/components/board/RichTextEditor";
 import { AIWritingAssistant } from "@/components/board/AIWritingAssistant";
@@ -19,6 +20,7 @@ import { TagInput } from "@/components/board/TagInput";
 const PostCreatePage = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user } = useAuth(); // ✅ AuthContext에서 user 가져오기
   const createPostMutation = useCreatePost();
   
   const [title, setTitle] = useState("");
@@ -30,26 +32,20 @@ const PostCreatePage = () => {
   const [categoryId, setCategoryId] = useState<number | undefined>();
   const [tags, setTags] = useState<string[]>([]); 
 
-  // ✅ 로그인 확인
+  // ✅ user 상태로 로그인 확인 (더 안전)
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    const user = localStorage.getItem('user');
-    
-    console.log('🔐 로그인 상태 확인:', {
-      hasToken: !!token,
-      hasUser: !!user,
-      tokenPreview: token ? token.substring(0, 20) + '...' : 'null'
-    });
-
-    if (!token) {
+    if (!user) {
+      console.warn('⚠️ 로그인 필요 - AuthContext의 user가 없음');
       toast({
         title: "로그인 필요",
         description: "게시글을 작성하려면 로그인이 필요합니다.",
         variant: "destructive",
       });
       navigate('/auth');
+    } else {
+      console.log('✅ 로그인 확인:', user);
     }
-  }, [navigate, toast]);
+  }, [user, navigate, toast]);
 
   const handleAIGenerate = (generatedTitle: string, generatedContent: string) => {
     setTitle(generatedTitle);
@@ -95,8 +91,8 @@ const PostCreatePage = () => {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    // ✅ 디버깅: 제출 데이터 로그
     console.log('=== 게시글 작성 요청 ===');
+    console.log('AuthContext User:', user);
     console.log('Title:', title);
     console.log('Content:', content);
     console.log('CategoryId:', categoryId);
@@ -105,12 +101,7 @@ const PostCreatePage = () => {
     console.log('Files:', files.length);
     console.log('Drawings:', drawings.length);
 
-    // ✅ 토큰 재확인
-    const token = localStorage.getItem('token');
-    const user = localStorage.getItem('user');
-    console.log('UserDetails:', user ? JSON.parse(user) : null);
-
-    if (!token) {
+    if (!user) {
       toast({
         title: "인증 오류",
         description: "로그인 세션이 만료되었습니다. 다시 로그인해주세요.",
@@ -164,27 +155,25 @@ const PostCreatePage = () => {
         onError: (error) => {
           console.error('❌ 게시글 작성 실패:', error);
           
-          // ✅ 401 에러 처리
-          if (error.message.includes('401') || error.message.includes('Unauthorized')) {
-            toast({
-              title: "인증 실패",
-              description: "로그인이 만료되었습니다. 다시 로그인해주세요.",
-              variant: "destructive",
-            });
-            localStorage.removeItem('token');
-            localStorage.removeItem('user');
-            navigate('/auth');
-          } else {
-            toast({
-              title: "게시글 작성 실패",
-              description: error.message,
-              variant: "destructive",
-            });
-          }
+          // ✅ 401 에러는 이미 postService에서 처리되므로 여기서는 제거
+          toast({
+            title: "게시글 작성 실패",
+            description: error.message,
+            variant: "destructive",
+          });
         },
       }
     );
   };
+
+  // ✅ user가 없으면 로딩 중 표시
+  if (!user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -219,13 +208,13 @@ const PostCreatePage = () => {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
-              {/* ✅ 카테고리 선택 */}
+              {/* 카테고리 선택 */}
               <CategorySelect 
                 value={categoryId}
                 onChange={setCategoryId}
               />
 
-              {/* ✅ 태그 입력 */}
+              {/* 태그 입력 */}
               <TagInput
                 value={tags}
                 onChange={setTags}
