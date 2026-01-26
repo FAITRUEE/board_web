@@ -94,3 +94,50 @@ export const useTeamMembers = (teamId: number) => {
     enabled: !!teamId,
   });
 };
+
+// 팀 삭제
+export const useDeleteTeam = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (teamId: number) => {
+      const response = await fetch(`${API_URL}/${teamId}`, {
+        method: 'DELETE',
+        headers: getAuthHeader(),
+      });
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+        const message = errorData?.message || '팀 삭제에 실패했습니다.';
+        throw new Error(message);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['my-teams'] });
+    },
+  });
+};
+
+// 팀원 초대
+export const useInviteMember = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ teamId, email, role }: { teamId: number; email: string; role?: string }) => {
+      const response = await fetch(`${API_URL}/${teamId}/members`, {
+        method: 'POST',
+        headers: getAuthHeader(),
+        body: JSON.stringify({ email, role: role || 'MEMBER' }),
+      });
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+        const message = errorData?.message || '팀원 초대에 실패했습니다.';
+        throw new Error(message);
+      }
+      return response.json() as Promise<TeamMember>;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['team-members', variables.teamId] });
+      queryClient.invalidateQueries({ queryKey: ['my-teams'] });
+    },
+  });
+};
