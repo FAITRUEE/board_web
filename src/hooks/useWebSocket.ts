@@ -5,21 +5,25 @@ import { Client, IMessage } from '@stomp/stompjs';
 
 interface WebSocketHookProps {
   url: string;
+  enabled?: boolean;
   onConnect?: () => void;
   onDisconnect?: () => void;
   onError?: (error: any) => void;
 }
 
-export const useWebSocket = ({ 
-  url, 
-  onConnect, 
-  onDisconnect, 
-  onError 
+export const useWebSocket = ({
+  url,
+  enabled = true,
+  onConnect,
+  onDisconnect,
+  onError,
 }: WebSocketHookProps) => {
   const clientRef = useRef<Client | null>(null);
   const [isConnected, setIsConnected] = useState(false);
 
   useEffect(() => {
+    if (!enabled) return;
+
     const client = new Client({
       webSocketFactory: () => new SockJS(url),
       reconnectDelay: 5000,
@@ -45,7 +49,7 @@ export const useWebSocket = ({
     return () => {
       client.deactivate();
     };
-  }, [url, onConnect, onDisconnect, onError]);
+  }, [url, enabled, onConnect, onDisconnect, onError]);
 
   const subscribe = useCallback(
     (destination: string, callback: (message: IMessage) => void) => {

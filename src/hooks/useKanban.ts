@@ -372,6 +372,71 @@ export const useToggleChecklistItem = () => {
   });
 };
 
+// 댓글 타입
+export interface CardComment {
+  id: number;
+  cardId: number;
+  userId: number;
+  username: string;
+  content: string;
+  createdAt: string;
+}
+
+// 카드 댓글 목록 조회
+export const useCardComments = (boardId: number, cardId: number) => {
+  return useQuery({
+    queryKey: ['card-comments', boardId, cardId],
+    queryFn: async () => {
+      const response = await fetch(`${API_URL}/boards/${boardId}/cards/${cardId}/comments`, {
+        headers: getAuthHeader(),
+      });
+      if (!response.ok) throw new Error('Failed to fetch comments');
+      return response.json() as Promise<CardComment[]>;
+    },
+    enabled: !!boardId && !!cardId,
+  });
+};
+
+// 댓글 추가
+export const useAddComment = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ boardId, cardId, content }: { boardId: number; cardId: number; content: string }) => {
+      const response = await fetch(`${API_URL}/boards/${boardId}/cards/${cardId}/comments`, {
+        method: 'POST',
+        headers: getAuthHeader(),
+        body: JSON.stringify({ content }),
+      });
+      if (!response.ok) throw new Error('Failed to add comment');
+      return response.json() as Promise<CardComment>;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['card-comments', variables.boardId, variables.cardId] });
+      queryClient.invalidateQueries({ queryKey: ['kanban-board', variables.boardId] });
+    },
+  });
+};
+
+// 댓글 삭제
+export const useDeleteComment = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ boardId, cardId, commentId }: { boardId: number; cardId: number; commentId: number }) => {
+      const response = await fetch(`${API_URL}/boards/${boardId}/cards/${cardId}/comments/${commentId}`, {
+        method: 'DELETE',
+        headers: getAuthHeader(),
+      });
+      if (!response.ok) throw new Error('Failed to delete comment');
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['card-comments', variables.boardId, variables.cardId] });
+      queryClient.invalidateQueries({ queryKey: ['kanban-board', variables.boardId] });
+    },
+  });
+};
+
 // ✅ 체크리스트 추가도 동일하게
 export const useAddChecklistItem = () => {
   const queryClient = useQueryClient();

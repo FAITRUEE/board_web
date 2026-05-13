@@ -14,6 +14,8 @@ import CategoryManagePage from "@/pages/CategoryManagePage";
 import { KanbanListPage } from './pages/KanbanList';
 import { KanbanBoardPage } from './pages/KanbanBoard';
 import { TeamListPage } from './pages/TeamList';
+import CollabRoomListPage from './pages/CollabRoomListPage';
+import CollabRoomPage from './pages/CollabRoomPage';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -66,17 +68,17 @@ function App() {
                 </Layout>
               } 
             />
-            <Route 
-              path="/posts/:id/edit" 
+            <Route
+              path="/posts/:id/edit"
               element={
                 <Layout>
                   <ProtectedRoute>
                     <PostEditPage />
                   </ProtectedRoute>
                 </Layout>
-              } 
+              }
             />
-            <Route 
+            <Route
               path="/categories/manage" 
               element={
                 <Layout>
@@ -109,6 +111,26 @@ function App() {
               } 
             />
             
+            {/* 공동 편집 방 */}
+            <Route
+              path="/collab"
+              element={
+                <Layout>
+                  <ProtectedRoute>
+                    <CollabRoomListPage />
+                  </ProtectedRoute>
+                </Layout>
+              }
+            />
+            <Route
+              path="/collab/:roomId"
+              element={
+                <ProtectedRoute>
+                  <CollabRoomPage />
+                </ProtectedRoute>
+              }
+            />
+
             {/* 404 페이지 */}
             <Route path="*" element={<NotFound />} />
           </Routes>

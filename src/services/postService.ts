@@ -156,7 +156,11 @@ export const createPost = async (request: CreatePostRequest): Promise<Post> => {
   if (request.secretPassword) {
     formData.append('secretPassword', request.secretPassword);
   }
-  
+
+  if (request.isCollaborative !== undefined) {
+    formData.append('isCollaborative', String(request.isCollaborative));
+  }
+
   if (request.files && request.files.length > 0) {
     request.files.forEach(file => {
       formData.append('files', file);

@@ -1,7 +1,7 @@
 // src/components/layout/Header.tsx
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { LogOut, PlusCircle, Settings, Users, Kanban as KanbanIcon, Home } from "lucide-react";
+import { LogOut, PlusCircle, Settings, Users, Kanban as KanbanIcon, Home, FileEdit } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import logo from "@/assets/logo.png";
@@ -55,6 +55,16 @@ export const Header = () => {
               >
                 <KanbanIcon className="w-4 h-4" />
                 <span>칸반 보드</span>
+              </Button>
+
+              <Button
+                variant={isActive('/collab') ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => navigate('/collab')}
+                className="flex items-center gap-2"
+              >
+                <FileEdit className="w-4 h-4" />
+                <span>공동 편집</span>
               </Button>
             </nav>
           </div>

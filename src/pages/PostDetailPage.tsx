@@ -29,7 +29,6 @@ const PostDetailPage = () => {
   const [isVerifying, setIsVerifying] = useState(false);
   const [verifiedPost, setVerifiedPost] = useState<Post | null>(null);
   const [isSecretLocked, setIsSecretLocked] = useState(false);
-
   const displayPost = verifiedPost || post;
 
   useEffect(() => {
@@ -212,27 +211,29 @@ const PostDetailPage = () => {
                 <span>목록으로</span>
               </Button>
             </div>
-            {isAuthor && !isSecretLocked && (
-              <div className="flex items-center space-x-2">
-                <Button 
-                  variant="outline" 
-                  onClick={handleEdit}
-                  className="flex items-center space-x-2"
-                >
-                  <Edit className="w-4 h-4" />
-                  <span>수정</span>
-                </Button>
-                <Button 
-                  variant="destructive" 
-                  onClick={handleDelete}
-                  disabled={deletePostMutation.isPending}
-                  className="flex items-center space-x-2"
-                >
-                  <Trash2 className="w-4 h-4" />
-                  <span>{deletePostMutation.isPending ? "삭제 중..." : "삭제"}</span>
-                </Button>
-              </div>
-            )}
+            <div className="flex items-center space-x-2">
+              {isAuthor && !isSecretLocked && (
+                <>
+                  <Button
+                    variant="outline"
+                    onClick={handleEdit}
+                    className="flex items-center space-x-2"
+                  >
+                    <Edit className="w-4 h-4" />
+                    <span>수정</span>
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    onClick={handleDelete}
+                    disabled={deletePostMutation.isPending}
+                    className="flex items-center space-x-2"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    <span>{deletePostMutation.isPending ? "삭제 중..." : "삭제"}</span>
+                  </Button>
+                </>
+              )}
+            </div>
           </div>
         </div>
       </header>

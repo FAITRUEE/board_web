@@ -1,24 +1,30 @@
 // src/components/kanban/CardDetailModal.tsx
 import React, { useState, useEffect } from 'react';
-import { 
-  X, 
-  User, 
-  Calendar, 
-  Flag, 
-  CheckSquare, 
-  Square, 
+import {
+  X,
+  User,
+  Calendar,
+  Flag,
+  CheckSquare,
+  Square,
   Plus,
   Trash2,
-  Clock
+  Clock,
+  MessageSquare,
+  Send
 } from 'lucide-react';
 import { KanbanCard } from '../../hooks/useKanban';
 import { useTeamMembers } from '../../hooks/useTeam';
+import { useAuth } from '../../contexts/AuthContext';
 import {
   useUpdateCard,
   useAddChecklistItem,
   useToggleChecklistItem,
   useDeleteChecklistItem,
   useKanbanBoard,
+  useCardComments,
+  useAddComment,
+  useDeleteComment,
 } from '../../hooks/useKanban';
 
 interface CardDetailModalProps {
@@ -88,12 +94,15 @@ export const CardDetailModal: React.FC<CardDetailModalProps> = ({
   const { data: board } = useKanbanBoard(boardId);
   const card = board?.cards?.find(c => c.id === initialCard.id) || initialCard;
 
+  const { user: currentUser } = useAuth();
+
   const [title, setTitle] = useState(card.title);
   const [description, setDescription] = useState(card.description || '');
   const [assignedTo, setAssignedTo] = useState<number | null>(card.assignedToId || null);
-  const [dueDate, setDueDate] = useState(formatDateTimeLocal(card.dueDate)); // ✅ 변경
+  const [dueDate, setDueDate] = useState(formatDateTimeLocal(card.dueDate));
   const [priority, setPriority] = useState(card.priority);
   const [newChecklistItem, setNewChecklistItem] = useState('');
+  const [newComment, setNewComment] = useState('');
 
   useEffect(() => {
     setTitle(card.title);
@@ -104,10 +113,13 @@ export const CardDetailModal: React.FC<CardDetailModalProps> = ({
   }, [card]);
 
   const { data: teamMembers } = useTeamMembers(teamId);
+  const { data: comments } = useCardComments(boardId, card.id);
   const updateCardMutation = useUpdateCard();
   const addChecklistMutation = useAddChecklistItem();
   const toggleChecklistMutation = useToggleChecklistItem();
   const deleteChecklistMutation = useDeleteChecklistItem();
+  const addCommentMutation = useAddComment();
+  const deleteCommentMutation = useDeleteComment();
 
   const handleImmediateUpdate = (updates: any) => {
     updateCardMutation.mutate({
@@ -158,6 +170,20 @@ export const CardDetailModal: React.FC<CardDetailModalProps> = ({
       cardId: card.id,
       itemId,
     });
+  };
+
+  const handleAddComment = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newComment.trim()) return;
+    addCommentMutation.mutate(
+      { boardId, cardId: card.id, content: newComment.trim() },
+      { onSuccess: () => setNewComment('') }
+    );
+  };
+
+  const handleDeleteComment = (commentId: number) => {
+    if (!window.confirm('댓글을 삭제하시겠습니까?')) return;
+    deleteCommentMutation.mutate({ boardId, cardId: card.id, commentId });
   };
 
 const handleDeleteChecklistItem = (e: React.MouseEvent, itemId: number) => {
@@ -392,12 +418,65 @@ const handleDeleteChecklistItem = (e: React.MouseEvent, itemId: number) => {
 
           {/* 댓글 섹션 */}
           <div>
-            <h3 className="text-lg font-semibold mb-3">
-              댓글 ({card.commentCount})
+            <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+              <MessageSquare size={20} />
+              댓글 ({comments?.length ?? card.commentCount})
             </h3>
-            <div className="text-gray-500 text-sm">
-              댓글 기능은 추후 추가 예정입니다.
+
+            {/* 댓글 목록 */}
+            <div className="space-y-3 mb-4">
+              {comments && comments.length > 0 ? (
+                comments.map((comment) => (
+                  <div key={comment.id} className="flex gap-3 group">
+                    <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
+                      <span className="text-blue-700 text-sm font-medium">
+                        {comment.username.charAt(0).toUpperCase()}
+                      </span>
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="font-medium text-sm">{comment.username}</span>
+                        <span className="text-xs text-gray-400">
+                          {new Date(comment.createdAt).toLocaleString('ko-KR')}
+                        </span>
+                      </div>
+                      <p className="text-sm text-gray-700 whitespace-pre-wrap">{comment.content}</p>
+                    </div>
+                    {currentUser?.id === comment.userId && (
+                      <button
+                        onClick={() => handleDeleteComment(comment.id)}
+                        className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-500 transition-all self-start mt-1 flex-shrink-0"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    )}
+                  </div>
+                ))
+              ) : (
+                <p className="text-sm text-gray-400 text-center py-4">
+                  아직 댓글이 없습니다. 첫 번째 댓글을 남겨보세요!
+                </p>
+              )}
             </div>
+
+            {/* 댓글 작성 폼 */}
+            <form onSubmit={handleAddComment} className="flex gap-2">
+              <input
+                type="text"
+                value={newComment}
+                onChange={(e) => setNewComment(e.target.value)}
+                placeholder="댓글을 입력하세요..."
+                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <button
+                type="submit"
+                disabled={!newComment.trim() || addCommentMutation.isPending}
+                className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center gap-2 transition-colors flex-shrink-0"
+              >
+                <Send size={16} />
+                전송
+              </button>
+            </form>
           </div>
         </div>
       </div>

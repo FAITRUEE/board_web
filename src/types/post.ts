@@ -15,6 +15,9 @@ export interface Post {
   updatedAt: string;
   attachments?: PostAttachment[];
   isSecret: boolean;
+  isCollaborative?: boolean;
+  teamId?: number;
+  teamName?: string;
   category?: Category;
   tags?: Tag[];  // ✅ 추가
 }
@@ -34,6 +37,7 @@ export interface CreatePostRequest {
   files?: File[];
   isSecret?: boolean;
   secretPassword?: string;
+  isCollaborative?: boolean;
   categoryId?: number;
   tags?: string[];  // ✅ 추가
 }
@@ -42,7 +46,9 @@ export interface UpdatePostRequest {
   title: string;
   content: string;
   categoryId?: number;
-  tags?: string[];  // ✅ 추가
+  tags?: string[];
+  isCollaborative?: boolean;
+  teamId?: number;  // ✅ 추가
 }
 
 export interface PostListResponse {

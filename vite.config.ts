@@ -228,11 +228,9 @@ export default defineConfig(({ mode }) => {
       },
     },
     define: {
-      // Define environment variables for build-time configuration
-      // In production, this will be false by default unless explicitly set to 'true'
-      // In development and test, this will be true by default
+      global: 'globalThis',
       __ROUTE_MESSAGING_ENABLED__: JSON.stringify(
-        mode === 'production' 
+        mode === 'production'
           ? process.env.VITE_ENABLE_ROUTE_MESSAGING === 'true'
           : process.env.VITE_ENABLE_ROUTE_MESSAGING !== 'false'
       ),

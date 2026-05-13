@@ -10,7 +10,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { usePost, useUpdatePost } from "@/hooks/usePosts";
 import { RichTextEditor } from "@/components/board/RichTextEditor";
 import { CategorySelect } from "@/components/board/CategorySelect";
-import { TagInput } from "@/components/board/TagInput";  // ✅ 추가
+import { TagInput } from "@/components/board/TagInput";
 
 const PostEditPage = () => {
   const navigate = useNavigate();
@@ -21,11 +21,11 @@ const PostEditPage = () => {
   const postId = parseInt(id || "0");
   const { data: post, isLoading, error } = usePost(postId);
   const updatePostMutation = useUpdatePost();
-  
+
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [categoryId, setCategoryId] = useState<number | undefined>();
-  const [tags, setTags] = useState<string[]>([]);  // ✅ 추가
+  const [tags, setTags] = useState<string[]>([]);
 
   useEffect(() => {
     if (post) {
