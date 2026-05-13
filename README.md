@@ -12,8 +12,8 @@ React + TypeScript + Vite 기반 통합 협업 플랫폼 프론트엔드입니�
 
 ## 🔗 바로가기
 
-- [Frontend Repository](https://github.com/username/frontend)
-- [Backend Repository](https://github.com/username/backend)
+- [Frontend Repository](https://github.com/FAITRUEE/board_web)
+- [Backend Repository](https://github.com/FAITRUEE/board_was)
 
 ---
 
