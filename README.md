@@ -78,7 +78,6 @@ React + TypeScript + Vite 기반 통합 협업 플랫폼 프론트엔드입니�
 ---
 
 ## 📁 프로젝트 구조
-
 ```
 src/
 ├── components/
