@@ -1,13 +1,21 @@
+// src/App.tsx
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { Toaster } from './components/ui/toaster';
+import { Layout } from './components/layout/Layout';
 import PostListPage from './pages/PostListPage';
 import PostDetailPage from './pages/PostDetailPage';
 import PostCreatePage from './pages/PostCreatePage';
 import PostEditPage from './pages/PostEditPage';
 import Auth from './pages/Auth';
 import NotFound from './pages/NotFound';
+import CategoryManagePage from "@/pages/CategoryManagePage";
+import { KanbanListPage } from './pages/KanbanList';
+import { KanbanBoardPage } from './pages/KanbanBoard';
+import { TeamListPage } from './pages/TeamList';
+import CollabRoomListPage from './pages/CollabRoomListPage';
+import CollabRoomPage from './pages/CollabRoomPage';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -42,31 +50,90 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <BrowserRouter>
-          <div className="min-h-screen bg-gray-50">
-            <Routes>
-              <Route path="/" element={<PostListPage />} />
-              <Route path="/auth" element={<Auth />} />
-              <Route path="/posts" element={<PostListPage />} />
-              <Route path="/posts/:id" element={<PostDetailPage />} />
-              <Route 
-                path="/posts/create" 
-                element={
+          <Routes>
+            {/* 인증 페이지 (헤더 없음) */}
+            <Route path="/auth" element={<Auth />} />
+            
+            {/* 레이아웃 적용 페이지 (헤더 있음) */}
+            <Route path="/" element={<Layout><PostListPage /></Layout>} />
+            <Route path="/posts" element={<Layout><PostListPage /></Layout>} />
+            <Route path="/posts/:id" element={<Layout><PostDetailPage /></Layout>} />
+            <Route 
+              path="/posts/create" 
+              element={
+                <Layout>
                   <ProtectedRoute>
                     <PostCreatePage />
                   </ProtectedRoute>
-                } 
-              />
-              <Route 
-                path="/posts/:id/edit" 
-                element={
+                </Layout>
+              } 
+            />
+            <Route
+              path="/posts/:id/edit"
+              element={
+                <Layout>
                   <ProtectedRoute>
                     <PostEditPage />
                   </ProtectedRoute>
-                } 
-              />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </div>
+                </Layout>
+              }
+            />
+            <Route
+              path="/categories/manage" 
+              element={
+                <Layout>
+                  <CategoryManagePage />
+                </Layout>
+              } 
+            />
+            <Route 
+              path="/teams" 
+              element={
+                <Layout>
+                  <TeamListPage />
+                </Layout>
+              } 
+            />
+            <Route 
+              path="/kanban" 
+              element={
+                <Layout>
+                  <KanbanListPage />
+                </Layout>
+              } 
+            />
+            <Route 
+              path="/kanban/:boardId" 
+              element={
+                <Layout>
+                  <KanbanBoardPage />
+                </Layout>
+              } 
+            />
+            
+            {/* 공동 편집 방 */}
+            <Route
+              path="/collab"
+              element={
+                <Layout>
+                  <ProtectedRoute>
+                    <CollabRoomListPage />
+                  </ProtectedRoute>
+                </Layout>
+              }
+            />
+            <Route
+              path="/collab/:roomId"
+              element={
+                <ProtectedRoute>
+                  <CollabRoomPage />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* 404 페이지 */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
           <Toaster />
         </BrowserRouter>
       </AuthProvider>

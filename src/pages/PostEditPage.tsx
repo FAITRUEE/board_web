@@ -3,12 +3,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { ArrowLeft, Save } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePost, useUpdatePost } from "@/hooks/usePosts";
+import { RichTextEditor } from "@/components/board/RichTextEditor";
+import { CategorySelect } from "@/components/board/CategorySelect";
+import { TagInput } from "@/components/board/TagInput";
 
 const PostEditPage = () => {
   const navigate = useNavigate();
@@ -19,16 +21,22 @@ const PostEditPage = () => {
   const postId = parseInt(id || "0");
   const { data: post, isLoading, error } = usePost(postId);
   const updatePostMutation = useUpdatePost();
-  
+
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
+  const [categoryId, setCategoryId] = useState<number | undefined>();
+  const [tags, setTags] = useState<string[]>([]);
 
   useEffect(() => {
     if (post) {
       setTitle(post.title);
       setContent(post.content);
+      setCategoryId(post.category?.id);
+      // ✅ 태그 초기값 설정
+      if (post.tags) {
+        setTags(post.tags.map(tag => tag.name));
+      }
       
-      // 작성자가 아닌 경우 접근 차단
       if (user && user.id !== post.authorId) {
         toast({
           title: "접근 권한 없음",
@@ -58,6 +66,8 @@ const PostEditPage = () => {
         request: {
           title: title.trim(),
           content: content.trim(),
+          categoryId,
+          tags,  // ✅ 태그 추가
         },
       },
       {
@@ -109,7 +119,6 @@ const PostEditPage = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* 헤더 */}
       <header className="bg-white shadow-sm border-b">
         <div className="max-w-4xl mx-auto px-4 py-4">
           <div className="flex items-center space-x-4">
@@ -126,17 +135,27 @@ const PostEditPage = () => {
         </div>
       </header>
 
-      {/* 메인 컨텐츠 */}
       <main className="max-w-4xl mx-auto px-4 py-8">
         <Card>
           <CardHeader>
             <CardTitle>게시글 수정</CardTitle>
             <CardDescription>
-              게시글의 제목과 내용을 수정할 수 있습니다.
+              게시글의 제목, 내용, 카테고리, 태그를 수정할 수 있습니다.
             </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
+              <CategorySelect 
+                value={categoryId}
+                onChange={setCategoryId}
+              />
+
+              {/* ✅ 태그 입력 추가 */}
+              <TagInput
+                value={tags}
+                onChange={setTags}
+              />
+
               <div className="space-y-2">
                 <Label htmlFor="title">제목</Label>
                 <Input
@@ -152,14 +171,11 @@ const PostEditPage = () => {
 
               <div className="space-y-2">
                 <Label htmlFor="content">내용</Label>
-                <Textarea
-                  id="content"
-                  name="content"
+                <RichTextEditor
                   value={content}
-                  onChange={(e) => setContent(e.target.value)}
+                  onChange={setContent}
                   placeholder="게시글 내용을 입력하세요"
-                  className="min-h-[300px]"
-                  required
+                  minHeight="300px"
                 />
               </div>
 

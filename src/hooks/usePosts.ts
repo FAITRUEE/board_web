@@ -2,14 +2,19 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import * as postService from '@/services/postService';
 import { CreatePostRequest, UpdatePostRequest } from '@/types/post';
 
-// 게시글 목록 조회 훅
-export const usePosts = (page: number = 0, size: number = 10) => {
+export const usePosts = (
+  page: number = 0, 
+  size: number = 10, 
+  sort?: string,
+  categoryId?: number,
+  tagName?: string,
+  keyword?: string  // ✅ 추가
+) => {
   return useQuery({
-    queryKey: ['posts', page, size],
-    queryFn: () => postService.getPosts(page, size),
+    queryKey: ['posts', page, size, sort, categoryId, tagName, keyword],  // ✅ keyword 추가
+    queryFn: () => postService.getPosts(page, size, sort, categoryId, tagName, keyword),  // ✅ keyword 전달
   });
 };
-
 // 게시글 상세 조회 훅
 export const usePost = (id: number) => {
   return useQuery({
@@ -26,7 +31,6 @@ export const useCreatePost = () => {
   return useMutation({
     mutationFn: (request: CreatePostRequest) => postService.createPost(request),
     onSuccess: () => {
-      // 게시글 목록 새로고침
       queryClient.invalidateQueries({ queryKey: ['posts'] });
     },
   });
@@ -40,7 +44,6 @@ export const useUpdatePost = () => {
     mutationFn: ({ id, request }: { id: number; request: UpdatePostRequest }) =>
       postService.updatePost(id, request),
     onSuccess: (_, variables) => {
-      // 해당 게시글과 목록 새로고침
       queryClient.invalidateQueries({ queryKey: ['post', variables.id] });
       queryClient.invalidateQueries({ queryKey: ['posts'] });
     },
@@ -54,7 +57,6 @@ export const useDeletePost = () => {
   return useMutation({
     mutationFn: (id: number) => postService.deletePost(id),
     onSuccess: () => {
-      // 게시글 목록 새로고침
       queryClient.invalidateQueries({ queryKey: ['posts'] });
     },
   });
@@ -67,7 +69,6 @@ export const useIncrementViews = () => {
   return useMutation({
     mutationFn: (id: number) => postService.incrementViews(id),
     onSuccess: (_, id) => {
-      // 해당 게시글 새로고침
       queryClient.invalidateQueries({ queryKey: ['post', id] });
     },
   });
@@ -80,7 +81,6 @@ export const useToggleLike = () => {
   return useMutation({
     mutationFn: (id: number) => postService.toggleLike(id),
     onSuccess: (_, id) => {
-      // 해당 게시글과 목록 새로고침
       queryClient.invalidateQueries({ queryKey: ['post', id] });
       queryClient.invalidateQueries({ queryKey: ['posts'] });
     },
