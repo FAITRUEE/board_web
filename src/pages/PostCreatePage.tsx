@@ -42,8 +42,6 @@ const PostCreatePage = () => {
         variant: "destructive",
       });
       navigate('/auth');
-    } else {
-      console.log('✅ 로그인 확인:', user);
     }
   }, [user, navigate, toast]);
 
@@ -91,15 +89,6 @@ const PostCreatePage = () => {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    console.log('=== 게시글 작성 요청 ===');
-    console.log('AuthContext User:', user);
-    console.log('Title:', title);
-    console.log('Content:', content);
-    console.log('CategoryId:', categoryId);
-    console.log('Tags:', tags);
-    console.log('IsSecret:', isSecret);
-    console.log('Files:', files.length);
-    console.log('Drawings:', drawings.length);
 
     if (!user) {
       toast({
@@ -131,7 +120,6 @@ const PostCreatePage = () => {
 
     const allFiles = [...files, ...drawings];
 
-    console.log('📤 Mutation 시작...');
 
     createPostMutation.mutate(
       {
@@ -145,7 +133,6 @@ const PostCreatePage = () => {
       },
       {
         onSuccess: (data) => {
-          console.log('✅ 게시글 작성 성공:', data);
           toast({
             title: "게시글 작성 완료",
             description: "게시글이 성공적으로 작성되었습니다.",

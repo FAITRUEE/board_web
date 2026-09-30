@@ -256,14 +256,12 @@ export const useDeleteChecklistItem = () => {
       cardId: number; 
       itemId: number 
     }) => {
-      console.log('🗑️ 체크리스트 삭제 요청:', { boardId, cardId, itemId });
       
       const response = await fetch(`${API_URL}/boards/${boardId}/cards/${cardId}/checklist/${itemId}`, {
         method: 'DELETE',
         headers: getAuthHeader(),
       });
       
-      console.log('🗑️ 삭제 응답 상태:', response.status);
       
       if (!response.ok) {
         const errorText = await response.text();
@@ -272,12 +270,10 @@ export const useDeleteChecklistItem = () => {
       }
       
       const result = await response.json();
-      console.log('✅ 삭제 성공:', result);
       return result as KanbanCard;
     },
     // ✅ onMutate 제거 - 낙관적 업데이트 없이 서버 응답만 사용
     onSuccess: (updatedCard, variables) => {
-      console.log('💾 캐시 업데이트 중...', updatedCard);
       
       // 서버에서 받은 최신 카드 데이터로 캐시 직접 업데이트
       queryClient.setQueryData<KanbanBoard>(['kanban-board', variables.boardId], (old) => {
@@ -290,7 +286,6 @@ export const useDeleteChecklistItem = () => {
           ),
         };
         
-        console.log('✅ 캐시 업데이트 완료:', newBoard);
         return newBoard;
       });
     },

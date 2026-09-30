@@ -1,5 +1,5 @@
 // src/pages/KanbanBoard.tsx
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   DndContext,
   DragEndEvent,
@@ -24,6 +24,7 @@ import { KanbanColumn } from '../components/kanban/KanbanColumn';
 import { KanbanCard } from '../components/kanban/KanbanCard';
 import { CardModal } from '../components/kanban/CardModal';
 import { CardDetailModal } from '../components/kanban/CardDetailModal';
+import { useKanbanRealtime } from '../hooks/useKanbanRealtime';
 
 const COLUMNS = [
   { id: 'TODO', title: '할 일 (To Do)' },
@@ -56,6 +57,14 @@ export const KanbanBoardPage: React.FC = () => {
   const createCardMutation = useCreateCard();
   const updateCardMutation = useUpdateCard();
   const deleteCardMutation = useDeleteCard();
+  const { isConnected } = useKanbanRealtime(Number(boardId));
+
+  // 보고 있던 카드를 다른 사용자가 삭제하면 상세 모달을 닫음
+  useEffect(() => {
+    if (viewingCard && board?.cards && !board.cards.some((c) => c.id === viewingCard.id)) {
+      setViewingCard(null);
+    }
+  }, [board, viewingCard]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -197,8 +206,15 @@ export const KanbanBoardPage: React.FC = () => {
                 <p className="text-sm text-gray-600 mt-1">{board.description}</p>
               )}
             </div>
-            <div className="ml-auto text-sm text-gray-500">
-              팀: {board.teamName}
+            <div className="ml-auto flex items-center gap-4 text-sm text-gray-500">
+              <span
+                className="flex items-center gap-1.5"
+                title={isConnected ? '다른 팀원의 변경 사항이 실시간으로 반영됩니다' : '실시간 연결 중...'}
+              >
+                <span className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-gray-300'}`} />
+                {isConnected ? '실시간' : '연결 중...'}
+              </span>
+              <span>팀: {board.teamName}</span>
             </div>
           </div>
         </div>

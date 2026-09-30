@@ -6,6 +6,9 @@ import {
   updateCollabRoomContent,
   publishCollabRoom,
   deleteCollabRoom,
+  getCollabRoomHistory,
+  createCollabRoomSnapshot,
+  restoreCollabRoomSnapshot,
 } from '@/services/collabRoomService';
 import { CreateCollabRoomRequest, PublishCollabRoomRequest, UpdateCollabRoomContentRequest } from '@/types/collabRoom';
 
@@ -32,8 +35,10 @@ export const useUpdateCollabRoomContent = () => {
   return useMutation({
     mutationFn: ({ roomId, req }: { roomId: number; req: UpdateCollabRoomContentRequest }) =>
       updateCollabRoomContent(roomId, req),
-    onSuccess: (_, { roomId }) =>
-      queryClient.invalidateQueries({ queryKey: ['collab-room', roomId] }),
+    onSuccess: (_, { roomId }) => {
+      queryClient.invalidateQueries({ queryKey: ['collab-room', roomId] });
+      queryClient.invalidateQueries({ queryKey: ['collab-room-history', roomId] });
+    },
   });
 };
 
@@ -51,5 +56,34 @@ export const useDeleteCollabRoom = () => {
   return useMutation({
     mutationFn: (roomId: number) => deleteCollabRoom(roomId),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['collab-rooms'] }),
+  });
+};
+
+export const useCollabRoomHistory = (roomId: number, enabled: boolean) =>
+  useQuery({
+    queryKey: ['collab-room-history', roomId],
+    queryFn: () => getCollabRoomHistory(roomId),
+    enabled: !!roomId && enabled,
+  });
+
+export const useCreateCollabRoomSnapshot = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ roomId, description }: { roomId: number; description?: string }) =>
+      createCollabRoomSnapshot(roomId, description),
+    onSuccess: (_, { roomId }) =>
+      queryClient.invalidateQueries({ queryKey: ['collab-room-history', roomId] }),
+  });
+};
+
+export const useRestoreCollabRoomSnapshot = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ roomId, historyId }: { roomId: number; historyId: number }) =>
+      restoreCollabRoomSnapshot(roomId, historyId),
+    onSuccess: (room, { roomId }) => {
+      queryClient.setQueryData(['collab-room', roomId], room);
+      queryClient.invalidateQueries({ queryKey: ['collab-room-history', roomId] });
+    },
   });
 };

@@ -3,6 +3,9 @@ import { useEffect, useRef, useCallback, useState } from 'react';
 import SockJS from 'sockjs-client';
 import { Client, IMessage } from '@stomp/stompjs';
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api';
+export const WS_URL = API_BASE_URL.replace(/\/api\/?$/, '') + '/ws';
+
 interface WebSocketHookProps {
   url: string;
   enabled?: boolean;

@@ -1,13 +1,10 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
-import { useWebSocket } from './useWebSocket';
+import { useWebSocket, WS_URL } from './useWebSocket';
 import { useAuth } from '../contexts/AuthContext';
-
-const WS_URL = 'http://localhost:8080/ws';
 
 export interface ActiveEditor {
   userId: number;
   username: string;
-  lastSeen: number;
 }
 
 export interface RoomEditMessage {
@@ -17,6 +14,7 @@ export interface RoomEditMessage {
   type: 'JOIN' | 'LEAVE' | 'CONTENT_CHANGE' | 'CURSOR_MOVE' | 'SAVE';
   content?: string;
   timestamp: number;
+  editors?: ActiveEditor[]; // JOIN / LEAVE 시 서버가 보내주는 현재 편집자 전체 목록
 }
 
 interface UseCollabRoomEditProps {
@@ -40,27 +38,15 @@ export const useCollabRoomEdit = ({ roomId, onRemoteContentChange }: UseCollabRo
 
     const unsubscribe = subscribe(`/topic/collab-room/${roomId}`, (message) => {
       const data: RoomEditMessage = JSON.parse(message.body);
-      if (data.userId === user.id) return;
 
-      switch (data.type) {
-        case 'JOIN':
-          setActiveEditors((prev) =>
-            prev.some((e) => e.userId === data.userId)
-              ? prev.map((e) =>
-                  e.userId === data.userId ? { ...e, lastSeen: data.timestamp } : e
-                )
-              : [...prev, { userId: data.userId, username: data.username, lastSeen: data.timestamp }]
-          );
-          break;
-        case 'LEAVE':
-          setActiveEditors((prev) => prev.filter((e) => e.userId !== data.userId));
-          break;
-        case 'CONTENT_CHANGE':
-          if (data.content !== undefined) {
-            isRemoteUpdateRef.current = true;
-            onRemoteRef.current(data.content);
-          }
-          break;
+      // 편집자 목록은 서버 기준으로 통째로 교체 (늦게 들어온 사람도 기존 편집자를 볼 수 있음)
+      if (data.editors) {
+        setActiveEditors(data.editors.filter((e) => e.userId !== user.id));
+      }
+
+      if (data.type === 'CONTENT_CHANGE' && data.userId !== user.id && data.content !== undefined) {
+        isRemoteUpdateRef.current = true;
+        onRemoteRef.current(data.content);
       }
     });
 
