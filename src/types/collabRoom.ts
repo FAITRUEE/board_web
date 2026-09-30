@@ -26,3 +26,14 @@ export interface PublishCollabRoomRequest {
   categoryId?: number;
   tags?: string[];
 }
+
+export interface EditHistoryEntry {
+  id: number;
+  roomId: number;
+  userId: number;
+  username: string;
+  title: string;
+  content: string;
+  changeDescription?: string;
+  createdAt: string;
+}

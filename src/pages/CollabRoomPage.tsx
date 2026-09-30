@@ -1,10 +1,17 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Users, Wifi, WifiOff, Send, Save } from "lucide-react";
+import { ArrowLeft, Users, Wifi, WifiOff, Send, Save, History, X, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { useCollabRoom, usePublishCollabRoom, useUpdateCollabRoomContent } from "@/hooks/useCollabRoom";
+import {
+  useCollabRoom,
+  useCollabRoomHistory,
+  useCreateCollabRoomSnapshot,
+  usePublishCollabRoom,
+  useRestoreCollabRoomSnapshot,
+  useUpdateCollabRoomContent,
+} from "@/hooks/useCollabRoom";
 import { useCollabRoomEdit } from "@/hooks/useCollabRoomEdit";
 import { useCategories } from "@/hooks/useCategories";
 
@@ -27,12 +34,21 @@ const CollabRoomPage = () => {
   const [showPublishModal, setShowPublishModal] = useState(false);
   const [publishCategoryId, setPublishCategoryId] = useState<number | undefined>();
   const [publishTags, setPublishTags] = useState("");
+  const [showHistory, setShowHistory] = useState(false);
+  const [selectedHistoryId, setSelectedHistoryId] = useState<number | null>(null);
+
+  const { data: history, isLoading: isHistoryLoading } = useCollabRoomHistory(id, showHistory);
+  const createSnapshotMutation = useCreateCollabRoomSnapshot();
+  const restoreMutation = useRestoreCollabRoomSnapshot();
+  const selectedHistory = history?.find((h) => h.id === selectedHistoryId);
 
   const saveDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const initializedRoomIdRef = useRef<number | null>(null);
 
-  // 방 데이터 초기 로드
+  // 방 데이터 초기 로드 (저장 후 다시 불러올 때 입력 중인 내용을 덮어쓰지 않도록 한 번만)
   useEffect(() => {
-    if (room) {
+    if (room && initializedRoomIdRef.current !== room.id) {
+      initializedRoomIdRef.current = room.id;
       setTitle(room.title || "");
       setContent(room.content || "");
     }
@@ -68,6 +84,30 @@ const CollabRoomPage = () => {
         setIsSaved(true);
       } catch {}
     }, 1000);
+  };
+
+  const handleSaveSnapshot = async () => {
+    try {
+      await createSnapshotMutation.mutateAsync({ roomId: id });
+      toast({ title: "현재 버전을 저장했습니다." });
+    } catch (e: any) {
+      toast({ title: "버전 저장 실패", description: e.message, variant: "destructive" });
+    }
+  };
+
+  const handleRestore = async (historyId: number) => {
+    if (!window.confirm("이 버전으로 복원할까요? 현재 내용은 버전 기록에 남습니다.")) return;
+    try {
+      if (saveDebounceRef.current) clearTimeout(saveDebounceRef.current);
+      const restored = await restoreMutation.mutateAsync({ roomId: id, historyId });
+      setTitle(restored.title || "");
+      setContent(restored.content || "");
+      setIsSaved(true);
+      setSelectedHistoryId(null);
+      toast({ title: "버전을 복원했습니다." });
+    } catch (e: any) {
+      toast({ title: "복원 실패", description: e.message, variant: "destructive" });
+    }
   };
 
   const handlePublish = async () => {
@@ -153,6 +193,16 @@ const CollabRoomPage = () => {
 
             <Button
               size="sm"
+              variant={showHistory ? "secondary" : "outline"}
+              onClick={() => setShowHistory((v) => !v)}
+              className="flex items-center gap-2"
+            >
+              <History className="w-4 h-4" />
+              버전 기록
+            </Button>
+
+            <Button
+              size="sm"
               onClick={() => setShowPublishModal(true)}
               className="flex items-center gap-2"
             >
@@ -180,6 +230,90 @@ const CollabRoomPage = () => {
           className="flex-1 w-full min-h-[60vh] border-none outline-none bg-transparent resize-none text-gray-700 leading-relaxed text-base placeholder-gray-300"
         />
       </main>
+
+      {/* 버전 기록 패널 */}
+      {showHistory && (
+        <aside className="fixed top-0 right-0 h-full w-full max-w-sm bg-white border-l shadow-xl z-50 flex flex-col">
+          <div className="flex items-center justify-between px-4 py-3 border-b">
+            <h2 className="font-bold flex items-center gap-2">
+              <History className="w-4 h-4" />
+              버전 기록
+            </h2>
+            <Button variant="ghost" size="sm" onClick={() => { setShowHistory(false); setSelectedHistoryId(null); }}>
+              <X className="w-4 h-4" />
+            </Button>
+          </div>
+
+          <div className="px-4 py-3 border-b">
+            <Button
+              size="sm"
+              variant="outline"
+              className="w-full"
+              onClick={handleSaveSnapshot}
+              disabled={createSnapshotMutation.isPending}
+            >
+              <Save className="w-4 h-4 mr-2" />
+              {createSnapshotMutation.isPending ? "저장 중..." : "현재 버전 저장"}
+            </Button>
+            <p className="text-xs text-gray-400 mt-2">
+              편집 중에는 5분마다 자동으로 버전이 저장됩니다.
+            </p>
+          </div>
+
+          {selectedHistory ? (
+            <div className="flex-1 flex flex-col min-h-0">
+              <div className="px-4 py-3 border-b flex items-center justify-between gap-2">
+                <Button variant="ghost" size="sm" onClick={() => setSelectedHistoryId(null)}>
+                  <ArrowLeft className="w-4 h-4 mr-1" />
+                  목록
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={() => handleRestore(selectedHistory.id)}
+                  disabled={restoreMutation.isPending}
+                >
+                  <RotateCcw className="w-4 h-4 mr-1" />
+                  {restoreMutation.isPending ? "복원 중..." : "이 버전으로 복원"}
+                </Button>
+              </div>
+              <div className="flex-1 overflow-y-auto px-4 py-3">
+                <p className="text-xs text-gray-400 mb-2">
+                  {new Date(selectedHistory.createdAt).toLocaleString("ko-KR")} · {selectedHistory.username}
+                </p>
+                <h3 className="text-lg font-bold mb-3">{selectedHistory.title || "제목 없음"}</h3>
+                <p className="text-sm text-gray-700 whitespace-pre-wrap break-words">
+                  {selectedHistory.content || <span className="text-gray-300">(내용 없음)</span>}
+                </p>
+              </div>
+            </div>
+          ) : (
+            <ul className="flex-1 overflow-y-auto divide-y">
+              {isHistoryLoading && <li className="px-4 py-6 text-sm text-gray-400 text-center">불러오는 중...</li>}
+              {!isHistoryLoading && !history?.length && (
+                <li className="px-4 py-6 text-sm text-gray-400 text-center">아직 저장된 버전이 없습니다.</li>
+              )}
+              {history?.map((h) => (
+                <li key={h.id}>
+                  <button
+                    onClick={() => setSelectedHistoryId(h.id)}
+                    className="w-full text-left px-4 py-3 hover:bg-gray-50 transition-colors"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-sm font-medium text-gray-900 truncate">{h.title || "제목 없음"}</span>
+                      {h.changeDescription && (
+                        <Badge variant="outline" className="shrink-0 text-[10px]">{h.changeDescription}</Badge>
+                      )}
+                    </div>
+                    <p className="text-xs text-gray-400 mt-1">
+                      {new Date(h.createdAt).toLocaleString("ko-KR")} · {h.username}
+                    </p>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </aside>
+      )}
 
       {/* 발행 모달 */}
       {showPublishModal && (

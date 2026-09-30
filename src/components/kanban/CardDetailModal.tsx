@@ -110,7 +110,8 @@ export const CardDetailModal: React.FC<CardDetailModalProps> = ({
     setAssignedTo(card.assignedToId || null);
     setDueDate(formatDateTimeLocal(card.dueDate)); // ✅ 변경
     setPriority(card.priority);
-  }, [card]);
+    // 보드가 다시 불러와질 때마다 입력 중인 값이 초기화되지 않도록 카드 값이 실제로 바뀐 경우에만 동기화
+  }, [card.id, card.title, card.description, card.assignedToId, card.dueDate, card.priority]);
 
   const { data: teamMembers } = useTeamMembers(teamId);
   const { data: comments } = useCardComments(boardId, card.id);
@@ -163,7 +164,6 @@ export const CardDetailModal: React.FC<CardDetailModalProps> = ({
     e.preventDefault();
     e.stopPropagation();
     
-    console.log('🔄 체크리스트 토글:', itemId); // ✅ 로그
     
     toggleChecklistMutation.mutate({
       boardId,
@@ -190,7 +190,6 @@ const handleDeleteChecklistItem = (e: React.MouseEvent, itemId: number) => {
   e.preventDefault();
   e.stopPropagation();
   
-  console.log('🗑️ 체크리스트 삭제 시도:', itemId);
   
   if (window.confirm('이 항목을 삭제하시겠습니까?')) {
     deleteChecklistMutation.mutate({

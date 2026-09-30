@@ -1,4 +1,4 @@
-import { CollabRoom, CreateCollabRoomRequest, UpdateCollabRoomContentRequest, PublishCollabRoomRequest } from '@/types/collabRoom';
+import { CollabRoom, CreateCollabRoomRequest, UpdateCollabRoomContentRequest, PublishCollabRoomRequest, EditHistoryEntry } from '@/types/collabRoom';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api';
 
@@ -64,4 +64,28 @@ export const deleteCollabRoom = async (roomId: number): Promise<void> => {
     headers: authHeaders(),
   });
   if (!res.ok) throw new Error('방 삭제에 실패했습니다.');
+};
+
+export const getCollabRoomHistory = async (roomId: number): Promise<EditHistoryEntry[]> => {
+  const res = await fetch(`${API_BASE_URL}/collab-rooms/${roomId}/history`, { headers: authHeaders() });
+  if (!res.ok) throw new Error('버전 기록을 불러오지 못했습니다.');
+  return res.json();
+};
+
+export const createCollabRoomSnapshot = async (roomId: number, description?: string): Promise<void> => {
+  const res = await fetch(`${API_BASE_URL}/collab-rooms/${roomId}/history`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({ description }),
+  });
+  if (!res.ok) throw new Error('버전 저장에 실패했습니다.');
+};
+
+export const restoreCollabRoomSnapshot = async (roomId: number, historyId: number): Promise<CollabRoom> => {
+  const res = await fetch(`${API_BASE_URL}/collab-rooms/${roomId}/history/${historyId}/restore`, {
+    method: 'POST',
+    headers: authHeaders(),
+  });
+  if (!res.ok) throw new Error('버전 복원에 실패했습니다.');
+  return res.json();
 };
